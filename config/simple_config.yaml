@@ -1,0 +1,14 @@
+execution:
+  mode: sequential
+  max_parallel_tests: 2
+  timeout_base: 30
+
+ai_features:
+  intelligent_test_generation: false
+  self_healing_tests: false
+  predictive_failure_analysis: false
+  automatic_optimization: false
+
+integrations:
+  jira_advanced_features: false
+  slack_rich_notifications: false

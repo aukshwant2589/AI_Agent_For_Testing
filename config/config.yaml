@@ -1,0 +1,19 @@
+jira:
+  server: "https://auxworx.atlassian.net"
+  project_key: "KAN"
+
+gemini:
+  model: "gemini-1.5-flash-latest"
+  temperature: 0.7
+
+test_generation:
+  default_framework: "pytest"
+  output_dir: "generated_tests"
+  enable_prioritization: true
+
+export:
+  testrail:
+    enabled: false
+    url: "https://your-company.testrail.io"
+  xray:
+    enabled: false

@@ -1,0 +1,23 @@
+PROMPT_TEMPLATES = {
+    "default": """
+    Generate test cases for this JIRA ticket...
+    """,
+
+    "security": """
+    As a Security QA Engineer, generate security-focused test cases...
+    Include OWASP Top 10 vulnerabilities testing...
+    """,
+
+    "performance": """
+    As a Performance QA Engineer, generate performance test cases...
+    Include load, stress, and endurance testing scenarios...
+    """,
+    "accessibility": """
+    As an Accessibility QA Engineer, generate WCAG compliance test cases...
+    Include screen reader, keyboard navigation, and color contrast testing...
+    """
+}
+
+def get_prompt_template(template_name: str, ticket_data: Dict) -> str:
+    base_template = PROMPT_TEMPLATES.get(template_name, PROMPT_TEMPLATES["default"])
+    return base_template.format(**ticket_data)
