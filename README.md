@@ -1,29 +1,30 @@
-# Ultimate AI Test Automation Coordinator
+# 🚀 AI Test Automation Agent
 
-Enterprise-grade test automation framework with AI-powered capabilities for comprehensive testing, from requirement analysis to execution and reporting.
+An AI-powered test automation agent that generates automated tests from Jira issues using CrewAI and Google Gemini. Supports both Playwright and Selenium frameworks.
 
-## Features
+[![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Code Style](https://img.shields.io/badge/code%20style-black-black)](https://github.com/psf/black)
 
-- **AI-Powered Requirement Analysis**: Advanced NLP analysis of requirements with risk assessment
-- **Intelligent Test Generation**: Self-healing, adaptive test cases with edge case coverage
-- **Multi-Execution Modes**: Sequential, parallel, and adaptive execution strategies
-- **Performance Monitoring**: Real-time system resource monitoring and optimization
-- **Jira Integration**: Comprehensive Jira integration for test management and reporting
-- **Security Testing**: Built-in security testing capabilities (SQL injection, XSS, etc.)
-- **Extensive Reporting**: HTML and JSON reports with detailed analytics and recommendations
+## ✨ Features
 
-## Installation
+- 🤖 **AI-Powered Test Generation** - Uses CrewAI and Google Gemini to analyze Jira issues and generate intelligent test cases
+- 🎯 **Jira Integration** - Direct integration with Jira for automatic issue analysis and processing
+- 🚀 **Dual Framework Support** - Generates tests for both Playwright and Selenium
+- 📊 **Priority-Based Testing** - Generates more comprehensive tests for high-priority issues
+- 📝 **Multiple Export Formats** - Exports tests as executable Python files and JSON documentation
+- ⚡ **CLI Interface** - Easy-to-use command-line interface for seamless integration into CI/CD pipelines
+
+## 📦 Installation
 
 ### Prerequisites
 
 - Python 3.8 or higher
-- Chrome browser (for Selenium tests)
-- Jira account (for Jira integration)
-- Google Gemini API key (for AI features)
+- Jira account with API access
+- Google Gemini API key
 
-### Quick Setup
+### 1. Clone the Repository
 
-1. Clone the repository:
 ```bash
-git clone <repository-url>
-cd ultimate-test-automation
+git clone https://github.com/aukshwant2589/AI_Agent_For_Testing.git
+cd AI_Agent_For_Testing
