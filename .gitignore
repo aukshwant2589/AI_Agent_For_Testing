@@ -2,6 +2,7 @@
 @"
 # Byte-compiled / optimized / DLL files
 __pycache__/
+*.pyc
 *.py[cod]
 *$py.class
 *.so
@@ -24,6 +25,15 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+
+# Generated files
+exports/
+reports/
+generated_tests/
+my_batch_results/
+*.log
+*.db
+*.sqlite3
 
 # Virtual environments
 venv/
