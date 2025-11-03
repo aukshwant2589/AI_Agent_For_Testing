@@ -50,31 +50,50 @@ class JIRAAIAnalyzer:
 
             # Setup AI client
             gemini_api_key = os.environ.get("GEMINI_API_KEY")
-            if gemini_api_key:
-                try:
-                    genai.configure(api_key=gemini_api_key)
-                    
-                    # Try to use a lighter model that might not have quota issues
-                    try:
-                        self.ai_model = genai.GenerativeModel('models/gemini-1.5-flash-latest')
-                        logger.info("✅ AI client initialized with model: models/gemini-1.5-flash-latest")
-                        self.ai_available = True
-                    except Exception as e:
-                        logger.warning(f"Failed to initialize preferred AI model: {e}")
-                        # Try any available model
-                        available_models = [model.name for model in genai.list_models() if 'flash' in model.name]
-                        if available_models:
-                            self.ai_model = genai.GenerativeModel(available_models[0])
-                            logger.info(f"✅ AI client initialized with model: {available_models[0]}")
-                            self.ai_available = True
-                        else:
-                            logger.warning("No suitable AI models available")
-                            
-                except Exception as e:
-                    logger.warning(f"AI client initialization failed: {e}")
-                    self.ai_available = False
-            else:
+            if not gemini_api_key:
                 logger.warning("GEMINI_API_KEY not found, using rule-based test generation")
+                self.ai_available = False
+                return
+                
+            try:
+                genai.configure(api_key=gemini_api_key)
+                
+                # Check if we're using a free or paid API key
+                try:
+                    # Quick test call to check quota type
+                    test_model = genai.GenerativeModel('gemini-pro')
+                    test_model.generate_content("test")
+                except Exception as e:
+                    if "free_tier" in str(e).lower():
+                        logger.warning("⚠️ Using Gemini API free tier (2 requests/min limit)")
+                        logger.warning("Consider upgrading to paid tier for better performance")
+                
+                # Initialize our preferred model
+                try:
+                    model_name = 'models/gemini-2.5-pro'
+                    self.ai_model = genai.GenerativeModel(model_name)
+                    logger.info(f"✅ AI client initialized with model: {model_name}")
+                    self.ai_available = True
+                except Exception as model_e:
+                    logger.warning(f"Failed to initialize preferred model: {model_e}")
+                    
+                    # Try fallback models
+                    fallback_models = ['gemini-pro', 'gemini-1.0-pro']
+                    for model in fallback_models:
+                        try:
+                            self.ai_model = genai.GenerativeModel(model)
+                            logger.info(f"✅ AI client initialized with fallback model: {model}")
+                            self.ai_available = True
+                            break
+                        except Exception:
+                            continue
+                            
+                    if not self.ai_available:
+                        logger.warning("No suitable AI models available")
+                            
+            except Exception as e:
+                logger.error(f"AI client initialization failed: {e}")
+                self.ai_available = False
 
         except Exception as e:
             logger.error(f"Error initializing clients: {e}")
@@ -95,24 +114,56 @@ class JIRAAIAnalyzer:
 
             logger.info(f"✅ Successfully fetched ticket: {ticket_data['key']} - {ticket_data['summary']}")
 
-            # Generate test cases - try AI first, then fallback to rules
+            # Generate test cases based on availability
             test_cases = []
             if self.ai_available and self.ai_model:
-                logger.info("🚀 Attempting to generate test cases with AI...")
-                test_cases = self.generate_test_cases_with_ai(ticket_data)
-            
-            # If AI failed or not available, use rule-based generation
+                try:
+                    logger.info("🚀 Attempting AI-powered test generation...")
+                    test_cases = self.generate_test_cases_with_ai(ticket_data)
+                    
+                    if test_cases:
+                        logger.info(f"✅ Generated {len(test_cases)} test cases with AI")
+                except KeyboardInterrupt:
+                    logger.info("\n\n⏳ Rate limit detected. Options:")
+                    logger.info("1. Wait ~60 seconds for rate limit to reset")
+                    logger.info("2. Use rule-based generation instead")
+                    logger.info("3. Upgrade to paid API tier for higher limits")
+                    
+                    choice = input("\nPress Enter to use rule-based generation, or 'w' to wait: ")
+                    if choice.lower() == 'w':
+                        logger.info("Waiting 60 seconds...")
+                        time.sleep(60)
+                        try:
+                            test_cases = self.generate_test_cases_with_ai(ticket_data)
+                        except:
+                            logger.info("🔄 Still rate limited, using rule-based generation")
+                            test_cases = self.generate_rule_based_test_cases(ticket_data)
+                    else:
+                        logger.info("🔄 Using rule-based test generation")
+                        test_cases = self.generate_rule_based_test_cases(ticket_data)
+                        
             if not test_cases:
-                logger.info("🔄 Using rule-based test case generation")
+                logger.info("🔄 Falling back to rule-based generation")
                 test_cases = self.generate_rule_based_test_cases(ticket_data)
 
             if not test_cases:
                 return self._error_response("Failed to generate test cases", ticket_id)
 
             # Create test scripts
-            self.create_test_scripts(test_cases, ticket_id)
+            try:
+                self.create_test_scripts(test_cases, ticket_id)
+                logger.info("✅ Test scripts generated successfully")
+            except Exception as e:
+                logger.error(f"Failed to create test scripts: {e}")
 
             return self._success_response(ticket_data, test_cases, ticket_id)
+            
+        except KeyboardInterrupt:
+            logger.info("\n\n⚠️ Operation cancelled by user")
+            return self._error_response("Operation cancelled", ticket_id)
+        except Exception as e:
+            logger.error(f"Unexpected error: {e}")
+            return self._error_response(str(e), ticket_id)
 
         except Exception as e:
             logger.error(f"JIRA AI analysis failed: {e}")
@@ -203,15 +254,21 @@ class JIRAAIAnalyzer:
         """Generate test cases using AI analysis with proper error handling"""
         try:
             prompt = self.create_ai_prompt(ticket_data)
+            max_retries = 3  # Reduced retries since we're handling rate limits better
             
-            # Add retry logic for quota issues
-            for attempt in range(3):
+            # Enhanced retry logic with proper rate limit handling
+            for attempt in range(max_retries):
                 try:
+                    # Log attempt information
+                    if attempt > 0:
+                        logger.info(f"Retry attempt {attempt + 1}/{max_retries}")
+                    
+                    # Make the API call
                     response = self.ai_model.generate_content(prompt)
                     
                     if not response or not response.text:
                         logger.error("Empty response from AI model")
-                        return []
+                        continue
 
                     logger.info(f"✅ AI response received: {len(response.text)} characters")
                     
@@ -223,18 +280,35 @@ class JIRAAIAnalyzer:
                         return test_cases
                     else:
                         logger.warning("AI failed to generate valid test cases")
-                        return []
+                        time.sleep(5)  # Brief pause before retry
+                        continue
                         
                 except Exception as e:
-                    if "quota" in str(e).lower() or "429" in str(e):
-                        wait_time = (attempt + 1) * 5  # Exponential backoff
-                        logger.warning(f"API quota exceeded, waiting {wait_time} seconds before retry...")
+                    error_msg = str(e).lower()
+                    error_str = str(e)
+                    
+                    # Check for rate limit retry delay in the error message
+                    retry_match = re.search(r'retry in (\d+\.?\d*)', error_str)
+                    if retry_match:
+                        wait_seconds = float(retry_match.group(1))
+                        logger.warning(f"Rate limit reached. Waiting {wait_seconds:.1f} seconds as advised by API...")
+                        time.sleep(wait_seconds + 1)  # Add 1 second buffer
+                        continue
+                        
+                    if "quota" in error_msg or "rate" in error_msg or "429" in error_msg:
+                        # Default wait time for other quota/rate limit errors
+                        wait_time = 60 if attempt == 0 else 120
+                        logger.warning(f"API quota exceeded, waiting {wait_time} seconds...")
                         time.sleep(wait_time)
                         continue
-                    else:
-                        raise e
                         
-            return []  # All retries failed
+                    logger.error(f"Unexpected error during AI generation: {e}")
+                    return []
+            
+            logger.error(f"Failed to generate test cases after {max_retries} attempts")
+            if self.ai_available:
+                logger.info("🔄 Falling back to rule-based test generation...")
+                return []  # Let the caller fall back to rule-based generation
 
         except Exception as e:
             logger.error(f"AI generation failed: {e}")
@@ -242,58 +316,230 @@ class JIRAAIAnalyzer:
 
     def create_ai_prompt(self, ticket_data: Dict) -> str:
         """Create detailed AI prompt for test case generation"""
-        # Truncate description if it's too long
-        description = ticket_data['description']
+        description = ticket_data.get('description', '')
         if len(description) > 1500:
             description = description[:1500] + "... [truncated]"
-            
-        return f"""
-ROLE: You are a Senior QA Automation Engineer with 10+ years of experience.
-TASK: Analyze this JIRA ticket and generate comprehensive test cases.
+        
+        # Analyze content for test type and specifics
+        content = description.lower()
+        patterns = {
+            'API': ['api', 'endpoint', 'request', 'response', 'http', 'rest'],
+            'UI': ['ui', 'page', 'screen', 'button', 'click', 'display'],
+            'Security': ['login', 'auth', 'token', 'password', 'credential'],
+            'Performance': ['performance', 'load', 'stress', 'speed', 'timeout']
+        }
+        
+        test_type = 'Functional'
+        test_focus = []
+        for type_name, keywords in patterns.items():
+            if any(word in content for word in keywords):
+                test_type = type_name
+                test_focus.extend(kw for kw in keywords if kw in content)
+                
+        test_focus = list(set(test_focus))  # Remove duplicates
+        
+        # Build a targeted AI prompt
+        prompt = f"""You are a senior QA automation engineer. Generate test cases for this {test_type} testing ticket.
 
-TICKET DETAILS:
-- ID: {ticket_data['key']}
-- Summary: {ticket_data['summary']}
-- Description: {description}
-- Type: {ticket_data['issue_type']}
-- Priority: {ticket_data['priority']}
-- Status: {ticket_data['status']}
+TICKET INFORMATION:
+ID: {ticket_data.get('key', '')}
+Summary: {ticket_data.get('summary', '')}
+Description: {description}
+Type: {ticket_data.get('issue_type', '')}
+Priority: {ticket_data.get('priority', '')}
 
-Generate 5-8 test cases covering:
-1. Positive scenarios
-2. Negative scenarios  
-3. Edge cases
-4. Basic functionality
+{'Key Areas: ' + ', '.join(test_focus) if test_focus else ''}
 
-Return ONLY JSON array with each test case having:
-- name: Test case name
-- description: What is being tested
-- priority: High/Medium/Low
-- steps: Array of test steps
-- expected_result: Expected outcome
-- test_data: Any required test data
-- prerequisites: Any setup requirements
-- type: Test type
+INSTRUCTIONS:
+1. Generate 4-6 detailed {test_type} test cases
+2. Return ONLY a valid JSON array following this exact format:
+[
+  {{
+    "id": "TC01",
+    "name": "Brief descriptive name",
+    "description": "What this test verifies",
+    "type": "{test_type}",
+    "priority": "High|Medium|Low",
+    "steps": [
+      "1. Detailed step one",
+      "2. Detailed step two"
+    ],
+    "expected_result": "Specific expected outcome",
+    "test_data": {{
+      "inputs": {{"field1": "actual value"}},
+      "validation": {{"expected": "expected value"}}
+    }}
+  }}
+]
 
-Format response as valid JSON only.
-"""
+IMPORTANT:
+- Ensure each test case has specific steps, not generic ones
+- Include realistic test data, not placeholders
+- Consider error cases and edge cases
+- The response must be properly formatted JSON only, no other text"""
+        
+        return prompt
 
     def parse_ai_response(self, ai_response: str, ticket_data: Dict) -> List[Dict]:
-        """Parse AI response into test cases with robust error handling"""
+        """Parse and validate AI response into well-structured test cases"""
         try:
-            # Clean the response
-            cleaned_response = re.sub(r'```json\s*|\s*```', '', ai_response.strip())
+            # Log the raw response in debug mode
+            logger.debug(f"Raw AI response: {ai_response}")
             
-            # Extract JSON array
-            json_match = re.search(r'\[\s*\{.*\}\s*\]', cleaned_response, re.DOTALL)
+            # Clean the response step by step
+            cleaned = ai_response.strip()
+            
+            # Remove any markdown code blocks
+            cleaned = re.sub(r'```(?:json)?\s*(.*?)\s*```', r'\1', cleaned, flags=re.DOTALL)
+            
+            # Remove any non-JSON text before or after
+            json_match = re.search(r'\[\s*\{.*?\}\s*\]', cleaned, re.DOTALL)
             if not json_match:
+                logger.error("No JSON array found in response")
+                logger.debug(f"Cleaned response: {cleaned}")
                 return []
                 
             json_str = json_match.group(0)
-            return json.loads(json_str)
+            
+            # Try to parse the JSON
+            try:
+                test_cases = json.loads(json_str)
+            except json.JSONDecodeError as je:
+                logger.error(f"JSON parse error at position {je.pos}: {je.msg}")
+                logger.debug(f"Invalid JSON: {json_str}")
+                return []
+            
+            # Must be a list
+            if not isinstance(test_cases, list):
+                logger.error("Response is not a JSON array")
+                return []
+            
+            # Validate and clean test cases
+            valid_test_cases = []
+            for i, tc in enumerate(test_cases, 1):
+                if not isinstance(tc, dict):
+                    logger.warning(f"Test case {i} is not a JSON object, skipping")
+                    continue
+                    
+                try:
+                    if self._validate_test_case(tc):
+                        cleaned_tc = self._clean_test_case(tc)
+                        valid_test_cases.append(cleaned_tc)
+                    else:
+                        logger.warning(f"Test case {i} failed validation")
+                except Exception as e:
+                    logger.warning(f"Error processing test case {i}: {e}")
+                    continue
+            
+            if not valid_test_cases:
+                logger.warning("No valid test cases found after validation")
+                logger.debug("All test cases failed validation")
+                return []
+                
+            return valid_test_cases
 
-        except (json.JSONDecodeError, ValueError):
+        except Exception as e:
+            logger.error(f"Failed to parse AI response: {e}")
             return []
+            
+    def _validate_test_case(self, tc: Dict) -> bool:
+        """Validate individual test case structure and content"""
+        try:
+            # Basic field presence
+            required_fields = ['id', 'name', 'type', 'priority', 'steps', 'expected_result']
+            missing = [f for f in required_fields if f not in tc]
+            if missing:
+                logger.debug(f"Missing required fields: {', '.join(missing)}")
+                return False
+            
+            # Type checking
+            field_types = {
+                'id': str,
+                'name': str,
+                'type': str,
+                'priority': str,
+                'steps': list,
+                'expected_result': str
+            }
+            
+            for field, expected_type in field_types.items():
+                value = tc.get(field)
+                if not isinstance(value, expected_type):
+                    logger.debug(f"Field '{field}' has wrong type: {type(value)}, expected {expected_type}")
+                    return False
+            
+            # Content validation
+            if not tc['name'].strip():
+                logger.debug("Empty test name")
+                return False
+                
+            if not tc['steps']:
+                logger.debug("Empty steps list")
+                return False
+                
+            if not tc['expected_result'].strip():
+                logger.debug("Empty expected result")
+                return False
+                
+            # Normalize and validate priority
+            priority = tc['priority'].strip().title()
+            if priority not in ['High', 'Medium', 'Low']:
+                logger.debug(f"Invalid priority: {priority}")
+                return False
+            
+            return True
+            
+        except Exception as e:
+            logger.debug(f"Validation error: {e}")
+            return False
+        
+    def _clean_test_case(self, tc: Dict) -> Dict:
+        """Clean and normalize test case data"""
+        cleaned = {}
+        
+        # Required fields with specific formats
+        tc_id = tc['id']
+        if tc_id.isdigit():
+            cleaned['id'] = "TC" + tc_id.zfill(2)
+        else:
+            cleaned['id'] = tc_id
+            
+        cleaned['name'] = tc['name'].strip()
+        cleaned['description'] = tc['description'].strip()
+        cleaned['priority'] = tc['priority'].strip().title()
+        cleaned['type'] = tc['type'].strip().title()
+        
+        # Lists that need cleaning
+        steps = []
+        for i, step in enumerate(tc['steps']):
+            step_text = step.strip()
+            if step_text:
+                if not step_text.startswith(str(i+1)):
+                    step_text = f"{i+1}. {step_text}"
+                steps.append(step_text)
+        cleaned['steps'] = steps
+        
+        cleaned['prerequisites'] = [
+            prereq.strip() for prereq in tc.get('prerequisites', [])
+            if prereq.strip()
+        ]
+        
+        # Single string field
+        cleaned['expected_result'] = tc.get('expected_result', '').strip()
+        
+        # Test data structure
+        cleaned['test_data'] = {
+            'inputs': {
+                k.strip(): str(v).strip()
+                for k, v in tc.get('test_data', {}).get('inputs', {}).items()
+            },
+            'validation': {
+                k.strip(): str(v).strip()
+                for k, v in tc.get('test_data', {}).get('validation', {}).items()
+            }
+        }
+        
+        return cleaned
 
     def generate_rule_based_test_cases(self, ticket_data: Dict) -> List[Dict]:
         """Generate comprehensive test cases based on ticket content"""

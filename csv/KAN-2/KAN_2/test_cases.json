@@ -1,0 +1,118 @@
+[
+  {
+    "title": "TC1: Verify getScore for a valid student with an existing score",
+    "given": "A valid authentication token is available in the environment. And The test database contains a student with the specified ID and an associated score record.",
+    "when": "Prepare a GraphQL query for 'getScore' with a valid student ID variable. And Set the 'Authorization' header with a valid bearer token. And Send the POST request to the GraphQL endpoint. And Validate the HTTP status code is 200 OK. And Assert that the response body's 'errors' field is null or empty.",
+    "then": "Assert that the 'data.getScore' object is not null and contains the expected score details.",
+    "expected": "The API returns a 200 OK status. The response body contains the correct score data, matching the expected schema (e.g., studentId, score, assessmentDate). The 'errors' field in the response is null or empty."
+  },
+  {
+    "title": "TC2: Verify API response with an invalid authentication token",
+    "given": "The GraphQL endpoint is running.",
+    "when": "Prepare a valid GraphQL query for 'getScore'. And Set the 'Authorization' header with an invalid or expired bearer token. And Send the POST request to the GraphQL endpoint.",
+    "then": "Validate the HTTP status code.",
+    "expected": "The API returns a 401 Unauthorized (or similar authentication error) status code. The response body contains a clear error message indicating authentication failure."
+  },
+  {
+    "title": "TC3: Verify getScore for a non-existent student ID",
+    "given": "A valid authentication token is available.",
+    "when": "Prepare a GraphQL query for 'getScore' with a non-existent student ID. And Set a valid 'Authorization' header. And Send the POST request. And Validate the HTTP status code is 200 OK. And Assert that the 'data.getScore' field in the response is null.",
+    "then": "Assert that the 'errors' array in the response body contains a specific error message (e.g., 'Student not found').",
+    "expected": "The API returns a 200 OK status, as is standard for GraphQL. The 'data.getScore' field is null, and the 'errors' array contains a descriptive error message indicating the resource was not found."
+  },
+  {
+    "title": "TC4: Verify getScore for a valid student with no score data",
+    "given": "A valid authentication token is available. And The test database contains a student with the specified ID but no associated score record.",
+    "when": "Prepare a GraphQL query for 'getScore' with a valid student ID for a student known to have no score. And Set a valid 'Authorization' header. And Send the POST request. And Validate the HTTP status code is 200 OK. And Assert that the 'errors' field is null or empty.",
+    "then": "Assert that the 'data.getScore' field is null.",
+    "expected": "The API returns a 200 OK status. The response 'data.getScore' field is null, indicating no data is available. The 'errors' field is empty, as this is a valid state, not a technical error."
+  },
+  {
+    "title": "TC5: Verify getScore with a malformed GraphQL query",
+    "given": "A valid authentication token is available.",
+    "when": "Prepare a malformed GraphQL query (e.g., missing a closing brace, incorrect field name). And Set a valid 'Authorization' header. And Send the POST request. And Validate the HTTP status code is 400 Bad Request.",
+    "then": "Assert that the response body contains an 'errors' array detailing the syntax error.",
+    "expected": "The API returns a 400 Bad Request status code. The response 'errors' array clearly indicates a GraphQL syntax or validation error."
+  },
+  {
+    "title": "TC6: Verify the response schema and data types are correct",
+    "given": "A valid authentication token is available. And A student with a score exists in the test data.",
+    "when": "Send a valid getScore request for a student with a known score. And On receiving a 200 OK response, programmatically inspect the response body. And Assert that 'data.getScore.studentId' is a string. And Assert that 'data.getScore.scoreValue' is a number (integer or float).",
+    "then": "Assert that 'data.getScore.assessmentDate' is a string in a valid ISO 8601 date format.",
+    "expected": "The response contains all expected fields, and the data type for each field is correct (e.g., 'studentId' is a string, 'scoreValue' is a number)."
+  },
+  {
+    "title": "TC7: Verify the API response time is within the acceptable SLA",
+    "given": "A valid authentication token is available. And The test environment is stable and not under abnormal load.",
+    "when": "Send a valid getScore request to the endpoint. And Measure the time taken from sending the request to receiving the full response.",
+    "then": "Assert that the measured response time is below the defined threshold.",
+    "expected": "The total response time for the API call is less than the defined threshold (e.g., < 800ms)."
+  },
+  {
+    "title": "TC1: Verify getScore for a valid student with an existing score",
+    "given": [
+      "A valid authentication token is available in the environment.",
+      "The test database contains a student with the specified ID and an associated score record."
+    ],
+    "when": "Prepare a GraphQL query for 'getScore' with a valid student ID variable.\nAnd Set the 'Authorization' header with a valid bearer token.\nAnd Send the POST request to the GraphQL endpoint.\nAnd Validate the HTTP status code is 200 OK.\nAnd Assert that the response body's 'errors' field is null or empty.\nAnd Assert that the 'data.getScore' object is not null and contains the expected score details.",
+    "then": "The API returns a 200 OK status. The response body contains the correct score data, matching the expected schema (e.g., studentId, score, assessmentDate). The 'errors' field in the response is null or empty.",
+    "expected": "The API returns a 200 OK status. The response body contains the correct score data, matching the expected schema (e.g., studentId, score, assessmentDate). The 'errors' field in the response is null or empty."
+  },
+  {
+    "title": "TC2: Verify API response with an invalid authentication token",
+    "given": [
+      "The GraphQL endpoint is running."
+    ],
+    "when": "Prepare a valid GraphQL query for 'getScore'.\nAnd Set the 'Authorization' header with an invalid or expired bearer token.\nAnd Send the POST request to the GraphQL endpoint.\nAnd Validate the HTTP status code.",
+    "then": "The API returns a 401 Unauthorized (or similar authentication error) status code. The response body contains a clear error message indicating authentication failure.",
+    "expected": "The API returns a 401 Unauthorized (or similar authentication error) status code. The response body contains a clear error message indicating authentication failure."
+  },
+  {
+    "title": "TC3: Verify getScore for a non-existent student ID",
+    "given": [
+      "A valid authentication token is available."
+    ],
+    "when": "Prepare a GraphQL query for 'getScore' with a non-existent student ID.\nAnd Set a valid 'Authorization' header.\nAnd Send the POST request.\nAnd Validate the HTTP status code is 200 OK.\nAnd Assert that the 'data.getScore' field in the response is null.\nAnd Assert that the 'errors' array in the response body contains a specific error message (e.g., 'Student not found').",
+    "then": "The API returns a 200 OK status, as is standard for GraphQL. The 'data.getScore' field is null, and the 'errors' array contains a descriptive error message indicating the resource was not found.",
+    "expected": "The API returns a 200 OK status, as is standard for GraphQL. The 'data.getScore' field is null, and the 'errors' array contains a descriptive error message indicating the resource was not found."
+  },
+  {
+    "title": "TC4: Verify getScore for a valid student with no score data",
+    "given": [
+      "A valid authentication token is available.",
+      "The test database contains a student with the specified ID but no associated score record."
+    ],
+    "when": "Prepare a GraphQL query for 'getScore' with a valid student ID for a student known to have no score.\nAnd Set a valid 'Authorization' header.\nAnd Send the POST request.\nAnd Validate the HTTP status code is 200 OK.\nAnd Assert that the 'errors' field is null or empty.\nAnd Assert that the 'data.getScore' field is null.",
+    "then": "The API returns a 200 OK status. The response 'data.getScore' field is null, indicating no data is available. The 'errors' field is empty, as this is a valid state, not a technical error.",
+    "expected": "The API returns a 200 OK status. The response 'data.getScore' field is null, indicating no data is available. The 'errors' field is empty, as this is a valid state, not a technical error."
+  },
+  {
+    "title": "TC5: Verify getScore with a malformed GraphQL query",
+    "given": [
+      "A valid authentication token is available."
+    ],
+    "when": "Prepare a malformed GraphQL query (e.g., missing a closing brace, incorrect field name).\nAnd Set a valid 'Authorization' header.\nAnd Send the POST request.\nAnd Validate the HTTP status code is 400 Bad Request.\nAnd Assert that the response body contains an 'errors' array detailing the syntax error.",
+    "then": "The API returns a 400 Bad Request status code. The response 'errors' array clearly indicates a GraphQL syntax or validation error.",
+    "expected": "The API returns a 400 Bad Request status code. The response 'errors' array clearly indicates a GraphQL syntax or validation error."
+  },
+  {
+    "title": "TC6: Verify the response schema and data types are correct",
+    "given": [
+      "A valid authentication token is available.",
+      "A student with a score exists in the test data."
+    ],
+    "when": "Send a valid getScore request for a student with a known score.\nAnd On receiving a 200 OK response, programmatically inspect the response body.\nAnd Assert that 'data.getScore.studentId' is a string.\nAnd Assert that 'data.getScore.scoreValue' is a number (integer or float).\nAnd Assert that 'data.getScore.assessmentDate' is a string in a valid ISO 8601 date format.",
+    "then": "The response contains all expected fields, and the data type for each field is correct (e.g., 'studentId' is a string, 'scoreValue' is a number).",
+    "expected": "The response contains all expected fields, and the data type for each field is correct (e.g., 'studentId' is a string, 'scoreValue' is a number)."
+  },
+  {
+    "title": "TC7: Verify the API response time is within the acceptable SLA",
+    "given": [
+      "A valid authentication token is available.",
+      "The test environment is stable and not under abnormal load."
+    ],
+    "when": "Send a valid getScore request to the endpoint.\nAnd Measure the time taken from sending the request to receiving the full response.\nAnd Assert that the measured response time is below the defined threshold.",
+    "then": "The total response time for the API call is less than the defined threshold (e.g., < 800ms).",
+    "expected": "The total response time for the API call is less than the defined threshold (e.g., < 800ms)."
+  }
+]

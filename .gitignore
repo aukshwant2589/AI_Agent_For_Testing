@@ -42,6 +42,14 @@ ENV/
 .env/
 .venv/
 
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+config.yaml
+simple_config.yaml
+ultimate_test_config.yaml
+
 # IDE files
 .vscode/
 .idea/

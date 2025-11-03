@@ -1,0 +1,1671 @@
+"""Enhanced test case generator for comprehensive test coverage"""
+import re
+import os
+import json
+import logging
+from pathlib import Path
+from typing import Dict, List, Optional
+
+from src.core.jira_ai_analyzer import JIRAAIAnalyzer
+
+logger = logging.getLogger(__name__)
+
+class TestCaseGenerator:
+    """Generates comprehensive test cases from JIRA tickets using AI-powered analysis"""
+
+    # Test categories and templates
+    def _get_test_templates(self):
+        """Get the test templates for different types of tests"""
+        return {
+            'validation': {
+                'weight': 0.3,
+                'min_cases': 5,
+                'subcategories': ['input_validation', 'data_types', 'business_rules'],
+                'prompt_template': """
+                Generate {min_cases} data validation test cases for:
+                Issue: {summary}
+                Description: {description}
+                Type: {type}
+                
+                Focus on:
+                - Input field validation
+                - Data type verification
+                - Required field handling
+                - Business rule validation
+                """
+            },
+            'edge_cases': {
+                'weight': 0.15,
+                'min_cases': 3,
+                'subcategories': ['boundary_values', 'error_conditions', 'timeout_scenarios'],
+                'prompt_template': """
+                Generate {min_cases} edge case test scenarios for:
+                Issue: {summary}
+                Description: {description}
+                Type: {type}
+                
+                Focus on:
+                - Boundary conditions
+                - Performance limits
+                - Resource constraints
+                - Error conditions
+                - Timeout scenarios
+                """
+            },
+            'negative': {
+                'weight': 0.15,
+                'min_cases': 3,
+                'subcategories': ['invalid_inputs', 'error_handling', 'security_checks'],
+                'prompt_template': """
+                Generate {min_cases} negative test scenarios for:
+                Issue: {summary}
+                Description: {description}
+                Type: {type}
+                
+                Focus on:
+                - Invalid input handling
+                - Error messages
+                - System resilience
+                - Security considerations
+                """
+            },
+            'integration': {
+                'weight': 0.2,
+                'min_cases': 3,
+                'subcategories': ['api_integration', 'data_flow', 'system_interaction'],
+                'prompt_template': """
+                Generate {min_cases} integration test cases for:
+                Issue: {summary}
+                Description: {description}
+                Type: {type}
+                
+                Focus on:
+                - System interactions
+                - Data flow verification
+                - API integration points
+                - End-to-end scenarios
+                """
+            }
+        }
+
+    def __init__(self):
+        """Initialize test case generator"""
+        self.ai_analyzer = JIRAAIAnalyzer({
+            'api_key': os.getenv('GEMINI_API_KEY'),
+            'temperature': 0.7,
+            'model': 'gemini-pro'
+        })
+        self.test_categories = self._get_test_templates()
+
+    def generate_test_cases(self, issue_data: Dict, output_dir: str) -> None:
+        """Generate test cases from JIRA issue data"""
+        logger.info(f"Analyzing JIRA issue: {issue_data.get('key', 'Unknown')}")
+        logger.info(f"Summary: {issue_data.get('summary', '')}")
+        logger.info(f"Description: {issue_data.get('description', '')}")
+
+        # Create test scenarios
+        scenarios = self._generate_scenarios(issue_data)
+        if not scenarios:
+            logger.warning("No test scenarios were generated")
+            return
+
+        # Create output directory
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Generate output files
+        ticket_id = issue_data['key']
+        feature_file = os.path.join(output_dir, f"{ticket_id}.feature")
+        test_file = os.path.join(output_dir, f"test_{ticket_id}.py")
+
+        self._write_feature_file(ticket_id, scenarios, feature_file)
+        self._write_test_file(ticket_id, scenarios, test_file)
+
+    def _generate_scenarios(self, issue_data: Dict) -> List[Dict]:
+        """Generate test scenarios using AI analysis"""
+        prompt = self._build_prompt(issue_data)
+        return self.ai_analyzer.analyze_requirements(issue_data, prompt)
+
+    def _build_prompt(self, issue_data: Dict) -> str:
+        """Build the AI prompt for test generation"""
+        return f"""
+        Generate detailed test scenarios for this JIRA ticket:
+        Summary: {issue_data.get('summary')}
+        Description: {issue_data.get('description')}
+        Priority: {issue_data.get('priority', 'Medium')}
+        Type: {issue_data.get('type', 'Feature')}
+
+        Include these types of tests:
+        1. Core functionality verification
+        2. Input validation and error handling
+        3. Edge cases and boundary values
+        4. Negative test scenarios
+        5. Integration test cases
+
+        Each scenario must include:
+        - Clear descriptive title
+        - Detailed explanation
+        - Priority level (High/Medium/Low)
+        - Test type (Security/Functional/etc)
+        - Step by step instructions
+        - Expected outcomes
+        - Test data with inputs and validation
+
+        Format each scenario as:
+        Scenario: [Title]
+        Description: [Detailed explanation]
+        Priority: [Priority level]
+        Type: [Test type]
+
+        Given [prerequisite step]
+        When [action step]
+        Then [expected outcome]
+        """
+
+    def _write_feature_file(self, ticket_id: str, scenarios: List[Dict], file_path: str) -> None:
+        """Write BDD feature file"""
+        feature_content = [
+            f"Feature: Test Cases for {ticket_id}",
+            "  Generated by Ultimate Test Automation Coordinator",
+            ""
+        ]
+
+        for scenario in scenarios:
+            # Add scenario details
+            feature_content.extend([
+                f"Scenario: {scenario['title']}",
+                f"  Description: {scenario.get('description', '')}",
+                f"  Priority: {scenario.get('priority', 'Medium')}",
+                f"  Type: {scenario.get('type', 'Test')}",
+                ""
+            ])
+
+            # Add steps
+            steps = scenario.get('steps', [])
+            for step in steps:
+                if step.lower().startswith(('given ', 'when ', 'then ', 'and ')):
+                    feature_content.append(f"  {step}")
+                else:
+                    feature_content.append(f"  Given {step}")
+
+            # Add expected result
+            feature_content.extend([
+                f"  Then {scenario.get('expected', 'Test passes')}",
+                ""
+            ])
+
+        # Write feature file
+        with open(file_path, 'w') as f:
+            f.write('\n'.join(feature_content))
+
+    def _write_test_file(self, ticket_id: str, scenarios: List[Dict], file_path: str) -> None:
+        """Write Python test implementation"""
+        test_content = [
+            '"""',
+            f'Automated test cases for {ticket_id}',
+            'Generated by Ultimate Test Automation Coordinator',
+            '"""',
+            '',
+            'import pytest',
+            'import logging',
+            'from typing import Dict',
+            '',
+            'logging.basicConfig(level=logging.INFO)',
+            'logger = logging.getLogger(__name__)',
+            '',
+            f'class Test{ticket_id.replace("-", "_")}:',
+            f'    """Test implementation for {ticket_id}"""',
+            ''
+        ]
+
+        for scenario in scenarios:
+            # Create method name
+            method_name = re.sub(r'[^a-zA-Z0-9]', '_', scenario['title'].lower())[:40]
+            method_name = f'test_{method_name}'
+
+            test_content.extend([
+                '',
+                f'    def {method_name}(self):',
+                '        """',
+                f'        {scenario["title"]}',
+                f'        Priority: {scenario.get("priority", "Medium")}',
+                f'        Type: {scenario.get("type", "Test")}',
+                '        """',
+                f'        logger.info("Executing: {scenario["title"]}")',
+                f'        logger.info("Description: {scenario.get("description", "")}")',
+                ''
+            ])
+
+            # Add test steps
+            steps = scenario.get('steps', [])
+            if steps:
+                test_content.append('        # Test steps')
+                for i, step in enumerate(steps, 1):
+                    test_content.extend([
+                        f'        logger.info("Step {i}: {step}")',
+                        f'        self._execute_step({i}, "{step}")'
+                    ])
+                test_content.append('')
+
+            # Add validation
+            expected = scenario.get('expected', 'Test passes')
+            test_content.extend([
+                '        # Validation',
+                f'        expected = "{expected}"',
+                f'        logger.info(f"Validating: {expected}")',
+                '',
+                '        # TODO: Implement test assertions',
+                '        assert True, "Test implementation needed"',
+                ''
+            ])
+
+        # Add helper methods
+        test_content.extend([
+            '    def _execute_step(self, step_num: int, step_desc: str) -> None:',
+            '        """Execute a test step"""',
+            '        # TODO: Implement step execution',
+            '        pass',
+            ''
+        ])
+
+        # Write test file
+        with open(file_path, 'w') as f:
+            f.write('\n'.join(test_content))
+
+class TestCaseGenerator:
+    """Generates comprehensive test cases covering multiple testing aspects"""
+
+    def __init__(self):
+        """Initialize the test case generator"""
+        self.ai_analyzer = JIRAAIAnalyzer({
+            'api_key': os.getenv('GEMINI_API_KEY'),
+            'temperature': 0.7,
+            'model': 'gemini-pro'
+        })
+        
+        # Test categories with weights and prompts
+        self.focus_areas = {
+            'functional': self._create_focus_area(0.3, 3, 
+                "Core functionality verification, user workflow completion, and feature interactions"),
+            'validation': self._create_focus_area(0.2, 3,
+                "Input validation rules, field-level validation, and business rules verification"),
+            'edge_cases': self._create_focus_area(0.2, 3,
+                "Boundary value testing, error conditions, and timeout scenarios"),
+            'negative': self._create_focus_area(0.15, 3,
+                "Invalid inputs handling, error handling, and security verification"),
+            'integration': self._create_focus_area(0.15, 3,
+                "API integration points, data flow between components, and system interactions")
+        }
+
+    def _create_focus_area(self, weight: float, min_cases: int, focus: str) -> Dict:
+        """Create a focus area configuration"""
+        return {
+            'weight': weight,
+            'min_cases': min_cases,
+            'prompt': f"Focus on testing with emphasis on: {focus}"
+        }
+
+    def generate_test_cases(self, issue_data: Dict, output_dir: str) -> None:
+        """Generate test cases from JIRA issue data"""
+        logger.info(f"Generating test cases for {issue_data.get('key', 'Unknown ticket')}")
+        logger.info(f"Summary: {issue_data.get('summary')}")
+        logger.info(f"Description: {issue_data.get('description')}")
+        
+        test_cases = []
+        ticket_id = issue_data['key']
+
+        # Generate test cases for each focus area
+        for focus_area, config in self.focus_areas.items():
+            # Build the prompt for this focus area
+            prompt = f"""
+            {config['prompt']}
+            
+            Based on this JIRA ticket:
+            Summary: {issue_data.get('summary')}
+            Description: {issue_data.get('description')}
+            Priority: {issue_data.get('priority', 'Medium')}
+            Type: {issue_data.get('type', 'Feature')}
+            
+            Generate {config['min_cases']} detailed test scenarios.
+            Each scenario must include:
+            - Clear descriptive title
+            - Detailed explanation of what's being tested
+            - Priority level (High/Medium/Low)
+            - Test type (Security/Functional/etc)
+            - Step by step instructions
+            - Expected outcomes with success/error criteria
+            - Test data with inputs and validation points
+            
+            Format as:
+            Scenario: [title]
+            Description: [description]
+            Priority: [priority]
+            Type: [type]
+            Given [prerequisite step]
+            When [action step]
+            Then [expected outcome]
+            """
+
+            # Generate scenarios for this focus area
+            scenarios = self.ai_analyzer.analyze_requirements(issue_data, prompt)
+            if scenarios:
+                test_cases.extend(scenarios)
+                logger.info(f"Generated {len(scenarios)} {focus_area} test scenarios")
+
+        # Ensure output directory exists
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Generate feature and test files
+        feature_file = os.path.join(output_dir, f"{ticket_id}.feature")
+        test_file = os.path.join(output_dir, f"test_{ticket_id}.py")
+        
+        self._write_feature_file(ticket_id, test_cases, feature_file)
+        self._write_test_file(ticket_id, test_cases, test_file)
+
+    def _write_feature_file(self, ticket_id: str, test_cases: List[Dict], output_path: str) -> None:
+        """Write BDD feature file"""
+        feature_content = [
+            f"Feature: Test Cases for {ticket_id}",
+            "  Generated by Ultimate Test Automation Coordinator",
+            ""
+        ]
+
+        for test_case in test_cases:
+            # Add scenario details
+            feature_content.extend([
+                f"Scenario: {test_case['title']}",
+                f"  Description: {test_case.get('description', '')}",
+                f"  Priority: {test_case.get('priority', 'Medium')}",
+                f"  Type: {test_case.get('type', 'Test')}",
+                ""
+            ])
+
+            # Add steps
+            steps = test_case.get('steps', [])
+            for step in steps:
+                if step.lower().startswith(('given ', 'when ', 'then ', 'and ')):
+                    feature_content.append(f"  {step}")
+                else:
+                    feature_content.append(f"  Given {step}")
+
+            # Add expected result and blank line
+            feature_content.extend([
+                f"  Then {test_case.get('expected', 'Test passes')}",
+                ""
+            ])
+
+        # Write feature file
+        with open(output_path, 'w') as f:
+            f.write('\n'.join(feature_content))
+
+    def _write_test_file(self, ticket_id: str, test_cases: List[Dict], output_path: str) -> None:
+        """Write Python test implementation"""
+        test_content = [
+            '"""',
+            f'Automated test cases for {ticket_id}',
+            'Generated by Ultimate Test Automation Coordinator',
+            '"""',
+            '',
+            'import pytest',
+            'import logging',
+            'from typing import Dict',
+            '',
+            'logging.basicConfig(level=logging.INFO)',
+            'logger = logging.getLogger(__name__)',
+            '',
+            f'class Test{ticket_id.replace("-", "_")}:',
+            f'    """Test implementation for {ticket_id}"""',
+            ''
+        ]
+
+        for test_case in test_cases:
+            # Create method name
+            method_name = re.sub(r'[^a-zA-Z0-9]', '_', test_case['title'].lower())[:40]
+            method_name = f'test_{method_name}'
+
+            test_content.extend([
+                '',
+                f'    def {method_name}(self):',
+                '        """',
+                f'        {test_case["title"]}',
+                f'        Priority: {test_case.get("priority", "Medium")}',
+                f'        Type: {test_case.get("type", "Test")}',
+                '        """',
+                f'        logger.info("Executing: {test_case["title"]}")',
+                f'        logger.info("Description: {test_case.get("description", "")}")',
+                ''
+            ])
+
+            # Add test steps
+            steps = test_case.get('steps', [])
+            if steps:
+                test_content.append('        # Test steps')
+                for i, step in enumerate(steps, 1):
+                    test_content.extend([
+                        f'        logger.info("Step {i}: {step}")',
+                        f'        self._execute_step({i}, "{step}")'
+                    ])
+                test_content.append('')
+
+            # Add validation
+            expected = test_case.get('expected', 'Test passes')
+            test_content.extend([
+                '        # Validation',
+                f'        expected = "{expected}"',
+                f'        logger.info(f"Validating: {expected}")',
+                '',
+                '        # TODO: Implement test assertions',
+                '        assert True, "Test implementation needed"',
+                ''
+            ])
+
+        # Add helper methods
+        test_content.extend([
+            '    def _execute_step(self, step_num: int, step_desc: str) -> None:',
+            '        """Execute a test step"""',
+            '        # TODO: Implement step execution',
+            '        pass',
+            ''
+        ])
+
+        # Write test file
+        with open(output_path, 'w') as f:
+            f.write('\n'.join(test_content))
+
+class TestCaseGenerator:
+    """Generates comprehensive test cases covering multiple testing aspects"""
+
+    def __init__(self):
+        """Initialize test case generator with focus areas and configuration"""
+        # Initialize AI analyzer
+        self.ai_analyzer = JIRAAIAnalyzer({
+            'api_key': os.getenv('GEMINI_API_KEY'),
+            'temperature': 0.7,
+            'model': 'gemini-pro'
+        })
+        
+        # Core test attributes
+        self.test_attributes = [
+            'test_focus_areas',
+            'security_requirements', 
+            'validation_points',
+            'test_complexity'
+        ]
+        
+        # Test focus areas with detailed prompts 
+        self.focus_areas = {
+            'functional': {
+                'weight': 0.3,
+                'min_cases': 3,
+                'prompt': "Focus on functional testing with emphasis on core functionality verification, user workflow completion and feature interactions."
+            },
+            'validation': {
+                'weight': 0.2,
+                'min_cases': 3,
+                'prompt': "Focus on validation testing with emphasis on input validation rules, field-level validation and business rules verification."
+            },
+            'edge_cases': {
+                'weight': 0.2,
+                'min_cases': 3,
+                'prompt': "Focus on edge cases testing with emphasis on boundary value testing, error conditions and timeout scenarios."
+            },
+            'negative': {
+                'weight': 0.15,
+                'min_cases': 3,
+                'prompt': "Focus on negative testing with emphasis on invalid inputs handling, error handling and security verification."
+            },
+            'integration': {
+                'weight': 0.15,
+                'min_cases': 3,
+                'prompt': "Focus on integration testing with emphasis on API integration points, data flow between components and system interactions."
+            }
+        }
+    def generate_test_cases(self, issue_data: Dict, output_dir: str) -> None:
+        """Generate comprehensive test cases from JIRA issue data"""
+        
+        logger.info(f"Generating test cases for {issue_data.get('key', 'Unknown ticket')}")
+        logger.info(f"Summary: {issue_data.get('summary')}")
+        logger.info(f"Description: {issue_data.get('description')}")
+        
+        test_cases = []
+        ticket_id = issue_data['key']
+
+        # Generate scenarios for each focus area
+        for focus_area, config in self.focus_areas.items():
+            base_prompt = config['prompt']
+            prompt = f"""
+            {base_prompt}
+
+            Based on this JIRA ticket:
+            Summary: {issue_data.get('summary')}
+            Description: {issue_data.get('description')}
+            Priority: {issue_data.get('priority', 'Medium')}
+            Type: {issue_data.get('type', 'Feature')}
+
+            Generate {config['min_cases']} detailed test scenarios.
+            Each scenario must include:
+            - Clear descriptive title
+            - Detailed explanation of what is being tested
+            - Priority level (High/Medium/Low)
+            - Test type (Security/Functional/etc)
+            - Prerequisite conditions if any  
+            - Step by step instructions with specific values
+            - Expected outcomes with clear success/error criteria
+            - Test data including inputs and validation points
+
+            Format as:
+            Scenario: [title]
+            Description: [description]
+            Priority: [priority]
+            Type: [type]
+
+            Given [prerequisite condition]
+            When [test step]
+            And [additional step]
+            Then [expected outcome]
+            """
+
+            # Generate scenarios
+            scenarios = self.ai_analyzer.analyze_requirements(issue_data, prompt)
+            if scenarios:
+                test_cases.extend(scenarios)
+                logger.info(f"Generated {len(scenarios)} {focus_area} scenarios")
+
+        # Create output directory
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Generate BDD feature file
+        feature_file = os.path.join(output_dir, f"{ticket_id}.feature")
+        self._write_feature_file(ticket_id, test_cases, feature_file)
+        logger.info(f"Generated feature file: {feature_file}")
+
+        # Generate Python test file
+        test_file = os.path.join(output_dir, f"test_{ticket_id}.py")
+        self._write_test_file(ticket_id, test_cases, test_file)
+        logger.info(f"Generated test file: {test_file}")
+
+    def _write_feature_file(self, ticket_id: str, test_cases: List[Dict], output_path: str) -> None:
+        """Write BDD feature file from test cases"""
+        
+        feature_content = [
+            f"Feature: Test Cases for {ticket_id}",
+            "  Generated by Ultimate Test Automation Coordinator",
+            ""
+        ]
+
+        for test_case in test_cases:
+            # Add scenario and metadata
+            feature_content.extend([
+                f"Scenario: {test_case['title']}",
+                f"  Description: {test_case.get('description', '')}",
+                f"  Priority: {test_case.get('priority', 'Medium')}",
+                f"  Type: {test_case.get('type', 'Test')}",
+                ""
+            ])
+
+            # Add prerequisites if any
+            prerequisites = test_case.get('prerequisites', [])
+            for prereq in prerequisites:
+                feature_content.append(f"  Given {prereq}")
+            
+            # Add steps
+            steps = test_case.get('steps', [])
+            for step in steps:
+                if step.lower().startswith(('given ', 'when ', 'then ', 'and ')):
+                    feature_content.append(f"  {step}")
+                else:
+                    feature_content.append(f"  Given {step}")
+            
+            # Add expected outcome
+            feature_content.extend([
+                f"  Then {test_case.get('expected', 'Test passes')}",
+                "" # Empty line between scenarios
+            ])
+
+        # Write to file
+        with open(output_path, 'w') as f:
+            f.write('\n'.join(feature_content))
+
+    def _write_test_file(self, ticket_id: str, test_cases: List[Dict], output_path: str) -> None:
+        """Write Python test file from test cases"""
+
+        test_content = [
+            '"""',
+            f'Automated Test Cases for {ticket_id}',
+            'Generated by Ultimate Test Automation Coordinator',
+            '"""',
+            "",
+            "import pytest",
+            "import logging",
+            "from typing import Dict",
+            "",
+            "# Configure logging",
+            "logging.basicConfig(level=logging.INFO)",
+            "logger = logging.getLogger(__name__)",
+            "",
+            f"class Test{ticket_id.replace('-', '_')}:",
+            f'    """Test cases for {ticket_id}"""',
+            ""
+        ]
+
+        for test_case in test_cases:
+            # Generate method name
+            method_name = re.sub(r'[^a-zA-Z0-9]', '_', test_case['title'].lower())
+            method_name = f"test_{method_name[:40]}"
+
+            test_content.extend([
+                "",
+                f"    def {method_name}(self):",
+                f'        """',
+                f'        {test_case["title"]}',
+                f'        Priority: {test_case.get("priority", "Medium")}',
+                f'        Type: {test_case.get("type", "Test")}',
+                f'        """',
+                f'        logger.info("Testing: {test_case["title"]}")',
+                f'        logger.info("Description: {test_case.get("description", "")}")',
+                "",
+                "        # Prerequisites",
+            ])
+
+            # Add prerequisites
+            prerequisites = test_case.get('prerequisites', [])
+            if prerequisites:
+                for prereq in prerequisites:
+                    test_content.append(f'        logger.info("Prerequisite: {prereq}")')
+                test_content.append('        self._verify_prerequisites()')
+                test_content.append("")
+
+            # Add test data setup
+            if test_case.get('test_data'):
+                test_content.extend([
+                    "        # Test data",
+                    f"        test_data = {test_case['test_data']}",
+                    "",
+                ])
+
+            # Add test steps
+            steps = test_case.get('steps', [])
+            test_content.append("        # Test steps")
+            for i, step in enumerate(steps, 1):
+                test_content.extend([
+                    f'        logger.info("Step {i}: {step}")',
+                    f"        self._execute_step({i}, '{step}')",
+                ])
+            test_content.append("")
+
+            # Add validation 
+            test_content.extend([
+                "        # Validation",
+                f"        expected = \"{test_case.get('expected', 'Test passes')}\"",
+                f"        logger.info(f\"Validating: {test_case.get('expected', 'Test passes')}\")",
+                "",
+                "        # TODO: Replace with actual test implementation",
+                '        assert True, "Test implementation needed"',
+                ""
+            ])
+
+        # Add helper methods
+        test_content.extend([
+            "    def _verify_prerequisites(self) -> None:",
+            "        # TODO: Implement prerequisite verification",
+            "        pass",
+            "",
+            "    def _execute_step(self, step_num: int, step_desc: str) -> None:", 
+            "        # TODO: Implement step execution",
+            "        pass",
+            ""
+        ])
+
+        # Write to file
+        with open(output_path, 'w') as f:
+            f.write('\n'.join(test_content))
+
+    def _generate_test_scenario(self, scenario_type: str, issue_data: Dict) -> Dict:
+        """Generate a single test scenario based on type and issue data"""
+        
+        # Get focus area config
+        focus_area = self.focus_areas.get(scenario_type)
+        if not focus_area:
+            logger.warning(f"Unknown scenario type: {scenario_type}")
+            return None
+
+        # Build AI prompt
+        prompt = focus_area['prompt'] + "\n" + """
+        Based on this JIRA ticket:
+        Summary: {summary}
+        Description: {description}
+        Priority: {priority}
+        Type: {type}
+        
+        Generate a single detailed test scenario focusing on {scenario_type} testing.
+        Follow this format exactly:
+        
+        title: Brief descriptive title
+        description: Detailed explanation of test purpose
+        priority: High/Medium/Low based on risk/impact
+        type: Type of test (e.g., Security, Functional)
+        prerequisites: List of required setup/conditions
+        steps:
+          - Detailed step 1 with exact values
+          - Detailed step 2 with exact values
+          - Additional steps as needed
+        expected: Specific expected outcome with success/error criteria
+        test_data:
+          inputs: Dictionary of test inputs
+          validation: Dictionary of validation criteria
+        """.format(
+            summary=issue_data.get('summary', ''),
+            description=issue_data.get('description', ''),
+            priority=issue_data.get('priority', 'Medium'),
+            type=issue_data.get('type', 'Feature'),
+            scenario_type=scenario_type
+        )
+
+        # Generate scenario using AI
+        scenario = self.ai_analyzer.analyze_requirements(issue_data, prompt)
+        if not scenario:
+            return None
+            
+        return scenario
+
+    def generate_test_cases(self, issue_data: Dict, output_dir: str) -> None:
+        """Generate comprehensive test cases from JIRA issue data"""
+        
+        logger.info(f"Generating test cases for {issue_data.get('key', 'Unknown ticket')}")
+        logger.info(f"Summary: {issue_data.get('summary')}")
+        logger.info(f"Description: {issue_data.get('description')}")
+        
+        test_cases = []
+        ticket_id = issue_data['key']
+
+        # Generate scenarios for each focus area
+        for focus_area, config in self.focus_areas.items():
+            num_cases = config['min_cases']
+            for i in range(num_cases):
+                scenario = self._generate_test_scenario(focus_area, issue_data)
+                if scenario:
+                    test_cases.append(scenario)
+                    logger.info(f"Generated {focus_area} scenario: {scenario.get('title')}")
+
+        # Ensure output directory exists
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Generate BDD feature file
+        feature_file = os.path.join(output_dir, f"{ticket_id}.feature")
+        self._generate_feature_file(ticket_id, test_cases, feature_file)
+        logger.info(f"Generated feature file: {feature_file}")
+
+        # Generate Python test file 
+        test_file = os.path.join(output_dir, f"test_{ticket_id}.py")
+        self._generate_python_test(ticket_id, test_cases, test_file)
+        logger.info(f"Generated test file: {test_file}")
+
+    def _generate_feature_file(self, ticket_id: str, scenarios: List[Dict], output_path: str) -> None:
+        """Generate BDD feature file from scenarios"""
+        
+        feature_content = [
+            f"Feature: Test Cases for {ticket_id}",
+            "  Generated by Ultimate Test Automation Coordinator",
+            ""
+        ]
+
+        for scenario in scenarios:
+            # Add scenario title and metadata
+            feature_content.extend([
+                f"Scenario: {scenario['title']}",
+                f"  Description: {scenario['description']}",
+                f"  Priority: {scenario['priority']}",
+                f"  Type: {scenario['type']}",
+                ""
+            ])
+
+            # Add prerequisites if any
+            if scenario.get('prerequisites'):
+                for prereq in scenario['prerequisites']:
+                    feature_content.append(f"  Given {prereq}")
+
+            # Add steps
+            for step in scenario['steps']:
+                if step.lower().startswith(('given ', 'when ', 'then ', 'and ')):
+                    feature_content.append(f"  {step}")
+                else:
+                    feature_content.append(f"  Given {step}")
+
+            # Add expected result
+            feature_content.extend([
+                f"  Then {scenario['expected']}",
+                ""
+            ])
+
+        # Write feature file
+        with open(output_path, 'w') as f:
+            f.write("\n".join(feature_content))
+
+    def _generate_python_test(self, ticket_id: str, scenarios: List[Dict], output_path: str) -> None:
+        """Generate Python test file from scenarios"""
+
+        test_content = [
+            '"""',
+            f'Automated Test Cases for {ticket_id}',
+            'Generated by Ultimate Test Automation Coordinator',
+            '"""',
+            "",
+            "import pytest",
+            "import logging",
+            "from typing import Dict",
+            "",
+            "logger = logging.getLogger(__name__)",
+            "",
+            f"class Test{ticket_id.replace('-', '_')}:",
+            f'    """Test implementation for {ticket_id}"""',
+            ""
+        ]
+
+        for scenario in scenarios:
+            # Create method name from scenario title
+            method_name = re.sub(r'[^a-zA-Z0-9_]', '_', scenario['title'].lower())
+            method_name = f"test_{method_name[:40]}"
+
+            test_content.extend([
+                f"    def {method_name}(self):",
+                f'        """',
+                f'        {scenario["title"]}',
+                f'        Priority: {scenario["priority"]}',
+                f'        Type: {scenario["type"]}',
+                f'        """',
+                "        # Setup logging",
+                f'        logger.info("Executing: {scenario["title"]}")',
+                f'        logger.info("Description: {scenario["description"]}")',
+                "",
+                "        # Test prerequisites",
+            ])
+
+            # Add prerequisite checks
+            if scenario.get('prerequisites'):
+                for prereq in scenario['prerequisites']:
+                    test_content.append(f'        logger.info("Prerequisite: {prereq}")')
+                    test_content.append('        self._verify_prerequisite("")  # TODO: Implement prerequisite check')
+                test_content.append("")
+
+            # Add test data setup
+            if scenario.get('test_data'):
+                test_content.extend([
+                    "        # Test data",
+                    f"        test_data: Dict = {scenario['test_data']}",
+                    ""
+                ])
+
+            # Add test steps
+            test_content.append("        # Test steps")
+            for i, step in enumerate(scenario['steps'], 1):
+                test_content.extend([
+                    f'        logger.info("Step {i}: {step}")',
+                    f"        self._execute_step_{i}()  # TODO: Implement step"
+                ])
+            test_content.append("")
+
+            # Add validation
+            test_content.extend([
+                "        # Validation",
+                f'        expected = "{scenario["expected"]}"',
+                '        logger.info(f"Validating: {expected}")',
+                "",
+                "        # TODO: Add actual test assertions here",
+                "        assert True, 'Test not yet implemented'",
+                ""
+            ])
+
+        # Add helper methods
+        test_content.extend([
+            "    def _verify_prerequisite(self, prereq: str) -> None:",
+            "        # TODO: Implement prerequisite verification",
+            "        pass",
+            "",
+            "    def _execute_step_1(self) -> None:",
+            "        # TODO: Implement test step",
+            "        pass",
+            ""
+        ])
+
+        # Write test file
+        with open(output_path, 'w') as f:
+            f.write("\n".join(test_content))
+    
+    def __init__(self):
+        # Initialize AI analyzer with default configuration
+        config = {
+            'api_key': os.getenv('GEMINI_API_KEY'),
+            'temperature': 0.7,
+            'model': 'gemini-pro'
+        }
+        self.ai_analyzer = JIRAAIAnalyzer(config)
+        
+        # Core test attributes to extract
+        self.test_attributes = [
+            'test_focus_areas',
+            'security_requirements', 
+            'validation_points',
+            'test_complexity'
+        ]
+        
+        # Test focus areas with detailed prompts
+        self.focus_areas = {
+            'functional': self._create_focus_area(
+                weight=0.3,
+                min_cases=3,
+                prompt="""Focus on functional testing with emphasis on:
+                    - Core functionality verification
+                    - User workflow completion
+                    - Feature interactions""",
+                coverage=['Main features', 'Workflow steps', 'Success criteria'],
+                test_data={'valid_inputs': True, 'edge_cases': False}
+            ),
+            'validation': self._create_focus_area(
+                weight=0.2,
+                min_cases=3,
+                prompt="""Focus on validation testing with emphasis on:
+                    - Input validation rules
+                    - Field-level validation
+                    - Business rules verification""",
+                coverage=['Input validation', 'Field validation', 'Business rules'],
+                test_data={'valid_inputs': True, 'invalid_inputs': True}
+            ),
+            'edge_cases': self._create_focus_area(
+                weight=0.2,
+                min_cases=3,
+                prompt="""Focus on edge cases testing with emphasis on:
+                    - Boundary value testing
+                    - Error conditions 
+                    - Timeout scenarios""",
+                coverage=['Boundary values', 'Error handling', 'Timeout handling'],
+                test_data={'edge_cases': True, 'invalid_inputs': True}
+            ),
+            'negative': self._create_focus_area(
+                weight=0.15,
+                min_cases=3, 
+                prompt="""Focus on negative testing with emphasis on:
+                    - Invalid inputs handling
+                    - Error handling
+                    - Security verification""",
+                coverage=['Invalid inputs', 'Error handling', 'Security checks'],
+                test_data={'invalid_inputs': True, 'security_tests': True}
+            ),
+            'integration': self._create_focus_area(
+                weight=0.15,
+                min_cases=3,
+                prompt="""Focus on integration testing with emphasis on:
+                    - API integration points
+                    - Data flow between components
+                    - System interactions""",
+                coverage=['API integration', 'Data flow', 'System interaction'],
+                test_data={'integration_data': True}
+            )
+        }
+
+    @staticmethod
+    def _create_focus_area(weight: float, min_cases: int, prompt: str,
+                          coverage: List[str], test_data: Dict[str, bool]) -> Dict:
+        """Helper to create consistently structured focus area configs"""
+        return {
+            'weight': weight,
+            'min_cases': min_cases,
+            'prompt': prompt,
+            'validation': {
+                'coverage': coverage,
+                'test_data': test_data
+            }
+        }
+
+    def _generate_feature_file(self, ticket_id: str, test_cases: List[Dict], output_dir: str) -> None:
+        """Generate BDD feature file from test cases"""
+        feature_file = os.path.join(output_dir, f"{ticket_id}.feature")
+        
+        feature_content = [
+            f"Feature: Test cases for JIRA ticket {ticket_id}",
+            "",  # Empty line after feature
+        ]
+
+        for test_case in test_cases:
+            # Add scenario
+            feature_content.extend([
+                f"Scenario: {test_case['title']}",
+                f"    Description: {test_case['description']}",
+                f"    Priority: {test_case['priority']}",
+                f"    Type: {test_case['type']}",
+                ""  # Empty line after metadata
+            ])
+
+            # Add steps
+            for step in test_case['steps']:
+                feature_content.append(f"    {step}")
+            
+            feature_content.append("")  # Empty line between scenarios
+
+        # Write feature file
+        with open(feature_file, 'w') as f:
+            f.write("\n".join(feature_content))
+
+    def _generate_python_test(self, ticket_id: str, test_cases: List[Dict], output_dir: str) -> None:
+        """Generate Python test file from test cases"""
+        test_file = os.path.join(output_dir, f"test_{ticket_id}.py")
+        
+        test_content = [
+            '"""',
+            f'Automated Test Cases for JIRA Ticket: {ticket_id}',
+            'Generated by Ultimate Test Automation Coordinator',
+            '"""',
+            "",
+            "import pytest",
+            "import time",
+            "import logging",
+            "",
+            "logging.basicConfig(level=logging.INFO)",
+            "logger = logging.getLogger(__name__)",
+            "",
+            f"class Test{ticket_id.replace('-', '_')}:",
+            f'    """Test cases for {ticket_id}"""',
+            ""
+        ]
+
+        for test_case in test_cases:
+            # Generate test method name
+            method_name = re.sub(r'[^a-zA-Z0-9]', '_', test_case['title'].lower())[:50]
+            method_name = f"test_{method_name}"
+            
+            test_content.extend([
+                "",
+                f"    def {method_name}(self):",
+                f'        """{test_case["title"]}"""',
+                f'        logger.info("Testing: {test_case["title"]}")',
+                f'        logger.info("Description: {test_case["description"]}")',
+                f'        logger.info("Priority: {test_case["priority"]}")',
+                f'        logger.info("Type: {test_case["type"]}")',
+                "        ",
+                '        logger.info("Steps:")',
+                f'        for step in {test_case["steps"]}:',
+                '            logger.info(f"  - {step}")',
+                "        ",
+                f'        logger.info("Prerequisites: {test_case.get("prerequisites", [])}")',
+                f'        logger.info("Test Data: {test_case.get("test_data", {})}")',
+                "        ",
+                "        # Simulate test execution",
+                "        time.sleep(0.2)",
+                "        ",
+                f'        logger.info("Expected: {test_case["expected"]}")',
+                '        assert True, "Test implementation needed - replace with actual test logic"',
+                ""
+            ])
+
+        # Write test file
+        with open(test_file, 'w') as f:
+            f.write("\n".join(test_content))
+
+    def generate_test_cases(self, issue_data: Dict, output_dir: str) -> None:
+        """Generate comprehensive test cases from JIRA issue data"""
+        
+        logger.info(f"Test Requirements: {json.dumps(issue_data, indent=2)}")
+        
+        test_cases = []
+        ticket_id = issue_data['key']
+
+        # Generate test cases for each focus area
+        for focus_area, config in self.focus_areas.items():
+            logger.info(f"Analyzing issue data:")
+            logger.info(f"Summary: {issue_data.get('summary')}")
+            logger.info(f"Description: {issue_data.get('description')}")
+
+            # Analyze test requirements with AI for this focus area
+            ai_prompt = config['prompt'] + f"""
+            Ticket Information:
+            Summary: {issue_data.get('summary')}
+            Description: {issue_data.get('description')}
+            Type: {issue_data.get('type')}
+
+            For each scenario:
+            1. Include a clear title that describes the test objective
+            2. Add a detailed description explaining what we're testing and why
+            3. Set appropriate priority (High/Medium/Low) and type
+            4. Write Given/When/Then steps that:
+                - Are highly detailed and specific
+                - Include actual values, credentials, endpoints
+                - Specify exact error codes and responses
+                - Cover security implications
+            5. Focus on security testing aspects:
+                - Access control
+                - Authentication/Authorization
+                - Input validation
+                - Error handling
+                - Information disclosure
+
+            Format each scenario as:
+            Scenario: [Clear Title]
+                Description: [Detailed explanation]
+                Priority: [High/Medium/Low] 
+                Type: [Security/Functional/etc]
+
+                Given [Step 1 with specific details]
+                Given [Step 2 with specific details]
+                Then [Expected outcome with specific success/error criteria]
+
+
+            Specifically focus on {focus_area} scenarios.
+            Each test case should:
+            1. Be specific to the feature described in the ticket
+            2. Include realistic test data
+            3. Have clear validation steps
+            4. Cover important edge cases
+            """
+            
+            # Generate test cases
+            area_test_cases = self.ai_analyzer.analyze_requirements(issue_data, ai_prompt)
+            test_cases.extend(area_test_cases)
+
+        # Generate feature and test files
+        self._generate_feature_file(ticket_id, test_cases, output_dir)
+        self._generate_python_test(ticket_id, test_cases, output_dir)
+
+    def _get_test_templates(self):
+        """Get the test templates for different types of tests"""
+        return {
+            'validation': {
+                'weight': 0.3,
+                'min_cases': 5,
+                'subcategories': ['input_validation', 'data_types', 'business_rules'],
+                'prompt_template': """
+                Generate {min_cases} data validation test cases for:
+                Issue: {summary}
+                Description: {description}
+                Type: {type}
+                
+                Focus on:
+                - Input field validation
+                - Data type verification
+                - Required field handling
+                - Business rule validation
+                
+                Include test cases for:
+                - Valid inputs
+                - Invalid inputs
+                - Boundary values
+                - Special characters
+                """
+            },
+            'edge_cases': {
+                'weight': 0.15,
+                'min_cases': 3,
+                'subcategories': ['boundary_values', 'error_conditions', 'timeout_scenarios'],
+                'prompt_template': """
+                Generate {min_cases} edge case test scenarios for:
+                Issue: {summary}
+                Description: {description}
+                Type: {type}
+                
+                Focus on:
+                - Boundary conditions
+                - Performance limits
+                - Resource constraints
+                - Error conditions
+                - Timeout scenarios
+                """
+            },
+            'negative': {
+                'weight': 0.15,
+                'min_cases': 3,
+                'subcategories': ['invalid_inputs', 'error_handling', 'security_checks'],
+                'prompt_template': """
+                Generate {min_cases} negative test scenarios for:
+                Issue: {summary}
+                Description: {description}
+                Type: {type}
+                
+                Focus on:
+                - Invalid input handling
+                - Error messages
+                - System resilience
+                - Security considerations
+                """
+            },
+            'integration': {
+                'weight': 0.2,
+                'min_cases': 3,
+                'subcategories': ['api_integration', 'data_flow', 'system_interaction'],
+                'prompt_template': """
+                Generate {min_cases} integration test cases for:
+                Issue: {summary}
+                Description: {description}
+                Type: {type}
+                
+                Focus on:
+                - System interactions
+                - Data flow verification
+                - API integration points
+                - End-to-end scenarios
+                """
+            }
+        }
+
+    def generate_test_scenarios(self, issue_data: Dict) -> List[Dict]:
+        """Generate comprehensive test scenarios based on issue data"""
+        try:
+            scenarios = []
+            feature_type = self._determine_feature_type(issue_data)
+            
+            # Generate test cases for each category
+            for category, config in self.test_categories.items():
+                # Format the prompt template
+                    # Create category-specific context
+                category_context = f"""
+You are a security testing expert. Based on the JIRA ticket details below, generate detailed BDD-style test scenarios in Gherkin format.
+Focus on {category} testing with emphasis on {', '.join(config['subcategories'])} scenarios.
+
+Ticket Information:
+Summary: {issue_data.get('summary', '')}
+Description: {issue_data.get('description', '')}
+Type: {feature_type}
+
+For each scenario:
+1. Include a clear title that describes the test objective
+2. Add a detailed description explaining what we're testing and why
+3. Set appropriate priority (High/Medium/Low) and type
+4. Write Given/When/Then steps that:
+   - Are highly detailed and specific
+   - Include actual values, credentials, endpoints
+   - Specify exact error codes and responses
+   - Cover security implications
+5. Focus on security testing aspects:
+   - Access control
+   - Authentication/Authorization
+   - Input validation
+   - Error handling
+   - Information disclosure
+
+Format each scenario as:
+Scenario: [Clear Title]
+    Description: [Detailed explanation]
+    Priority: [High/Medium/Low]
+    Type: [Security/Functional/etc]
+
+    Given [Step 1 with specific details]
+    Given [Step 2 with specific details]
+    Then [Expected outcome with specific success/error criteria]
+"""
+                # Generate AI test cases for each subcategory
+                for subcategory in config['subcategories']:
+                    subcategory_prompt = f"""
+{category_context}
+
+Specifically focus on {subcategory.replace('_', ' ')} scenarios.
+Each test case should:
+1. Be specific to the feature described in the ticket
+2. Include realistic test data
+3. Have clear validation steps
+4. Cover important edge cases
+"""
+                    
+                    # Prepare issue data with category-specific prompt
+                    category_issue_data = issue_data.copy()
+                    category_issue_data['description'] = subcategory_prompt
+                    
+                    # Generate test cases using the AI analyzer
+                    ai_response = self.ai_analyzer.analyze_issue(category_issue_data)
+                    if 'test_cases' in ai_response:
+                        ai_test_cases = ai_response['test_cases']
+                        
+                        # Format and add the test cases
+                        for i, tc in enumerate(ai_test_cases, 1):
+                            # Create a descriptive name based on the test content
+                            test_name = tc.get('name', '')
+                            if not test_name:
+                                test_name = f"Test {issue_data.get('summary', '')} - {category.title()} - {subcategory.replace('_', ' ').title()} #{i}"
+                            
+                            # Extract or generate description
+                            description = tc.get('description', '')
+                            if not description:
+                                description = f"Verify {subcategory.replace('_', ' ')} scenario for {issue_data.get('summary', '')}"
+                            
+                            # Format the test case
+                            # Format in Gherkin style
+                            gherkin_steps = []
+                            for step in tc.get('steps', []):
+                                if isinstance(step, str):
+                                    gherkin_steps.append(f"Given {step}")
+                            
+                            # Add the expected result as a Then step
+                            expected = tc.get('expected_result', '')
+                            if expected:
+                                gherkin_steps.append(f"Then {expected}")
+                            
+                            formatted_case = {
+                                'id': f"TC_{category}_{subcategory}_{i}",
+                                'name': test_name,
+                                'category': category,
+                                'subcategory': subcategory,
+                                'description': description,
+                                'priority': tc.get('priority', 'Medium'),
+                                'type': feature_type.capitalize(),
+                                'steps': gherkin_steps
+                            }
+                            scenarios.append(formatted_case)
+            
+            return scenarios
+            
+        except Exception as e:
+            logger.error(f"Error generating test scenarios: {str(e)}", exc_info=True)
+            return []
+        
+    def _determine_feature_type(self, issue_data: Dict) -> str:
+        """Determine the type of feature being tested"""
+        description = issue_data.get('description', '').lower()
+        summary = issue_data.get('summary', '').lower()
+        
+        feature_indicators = {
+            'ui': ['page', 'screen', 'button', 'click', 'display', 'view', 'interface'],
+            'api': ['endpoint', 'api', 'request', 'response', 'service'],
+            'database': ['database', 'data', 'storage', 'record', 'query'],
+            'integration': ['integrate', 'connection', 'external', 'system'],
+            'security': ['login', 'auth', 'permission', 'role', 'access']
+        }
+        
+        for ftype, indicators in feature_indicators.items():
+            if any(ind in description or ind in summary for ind in indicators):
+                return ftype
+                
+        return 'general'
+        
+    def _assess_complexity(self, issue_data: Dict) -> int:
+        """Assess the complexity of the feature (1-5)"""
+        description = issue_data.get('description', '')
+        
+        factors = {
+            'length': len(description.split()),
+            'technical_terms': len(re.findall(r'\b(API|JSON|SQL|HTTP|REST|Token)\b', description)),
+            'conditions': len(re.findall(r'\b(if|when|then|must|should)\b', description.lower())),
+            'data_points': len(re.findall(r'\b(field|value|input|data|parameter)\b', description.lower()))
+        }
+        
+        complexity_score = (
+            (factors['length'] / 100) +
+            (factors['technical_terms'] * 0.5) +
+            (factors['conditions'] * 0.3) +
+            (factors['data_points'] * 0.2)
+        )
+        
+        return min(max(int(complexity_score), 1), 5)
+        
+    def _generate_category_cases(
+        self,
+        category: str,
+        config: Dict,
+        issue_data: Dict,
+        feature_type: str,
+        complexity: int
+    ) -> List[Dict]:
+        """Generate test cases for a specific category"""
+        cases = []
+        base_cases = max(config['min_cases'], complexity)
+        
+        for subcategory in config['subcategories']:
+            subcategory_cases = self._generate_subcategory_cases(
+                category,
+                subcategory,
+                issue_data,
+                feature_type,
+                base_cases
+            )
+            cases.extend(subcategory_cases)
+            
+        return cases
+        
+    def _generate_subcategory_cases(
+        self,
+        category: str,
+        subcategory: str,
+        issue_data: Dict,
+        feature_type: str,
+        base_cases: int
+    ) -> List[Dict]:
+        """Generate test cases for a specific subcategory"""
+        cases = []
+        
+        # Get template based on feature type and category
+        template = self._get_test_template(feature_type, category, subcategory)
+        
+        # Generate multiple cases using the template
+        for i in range(base_cases):
+            test_case = template.copy()
+            
+            # Customize test case based on issue data
+            test_case = self._customize_test_case(
+                test_case,
+                issue_data,
+                category,
+                subcategory,
+                i + 1
+            )
+            
+            cases.append(test_case)
+            
+        return cases
+        
+    def _get_test_template(
+        self,
+        feature_type: str,
+        category: str,
+        subcategory: str
+    ) -> Dict:
+        """Get test case template based on type and category"""
+        templates = {
+            'ui': {
+                'functional': {
+                    'happy_path': {
+                        'steps': [
+                            'Navigate to {page}',
+                            'Verify page elements are displayed',
+                            'Perform main action',
+                            'Verify expected outcome'
+                        ]
+                    }
+                }
+            },
+            'api': {
+                'functional': {
+                    'happy_path': {
+                        'steps': [
+                            'Prepare request payload',
+                            'Send API request',
+                            'Verify response status',
+                            'Validate response data'
+                        ]
+                    }
+                }
+            }
+        }
+        
+        return templates.get(feature_type, {}).get(category, {}).get(
+            subcategory,
+            {'steps': ['Step 1', 'Step 2', 'Step 3']}  # Default template
+        )
+        
+    def _customize_test_case(
+        self,
+        template: Dict,
+        issue_data: Dict,
+        category: str,
+        subcategory: str,
+        index: int
+    ) -> Dict:
+        """Customize test case with specific details"""
+        feature_name = issue_data.get('summary', '').strip()
+        
+        test_case = {
+            'id': f"TC_{category}_{subcategory}_{index}",
+            'name': f"Test {feature_name} - {category.title()} - {subcategory.replace('_', ' ').title()}",
+            'category': category,
+            'subcategory': subcategory,
+            'priority': self._determine_priority(category, subcategory),
+            'description': self._generate_description(
+                feature_name,
+                category,
+                subcategory
+            ),
+            'steps': self._customize_steps(
+                template.get('steps', []),
+                issue_data,
+                category,
+                subcategory
+            ),
+            'test_data': self._generate_test_data(
+                category,
+                subcategory,
+                issue_data
+            ),
+            'expected_result': self._generate_expected_result(
+                category,
+                subcategory,
+                issue_data
+            )
+        }
+        
+        return test_case
+        
+    def _determine_priority(self, category: str, subcategory: str) -> str:
+        """Determine test case priority"""
+        priority_map = {
+            'functional': {
+                'happy_path': 'High',
+                'basic_workflow': 'High',
+                'main_features': 'High'
+            },
+            'validation': {
+                'input_validation': 'Medium',
+                'field_validation': 'Medium',
+                'business_rules': 'High'
+            },
+            'edge_cases': {
+                'boundary_values': 'Medium',
+                'error_conditions': 'Medium',
+                'timeout_scenarios': 'Low'
+            },
+            'negative': {
+                'invalid_inputs': 'Medium',
+                'error_handling': 'Medium',
+                'security_checks': 'High'
+            },
+            'integration': {
+                'api_integration': 'High',
+                'data_flow': 'Medium',
+                'system_interaction': 'Medium'
+            }
+        }
+        
+        return priority_map.get(category, {}).get(subcategory, 'Medium')
+        
+    def _generate_description(
+        self,
+        feature_name: str,
+        category: str,
+        subcategory: str
+    ) -> str:
+        """Generate detailed test case description"""
+        descriptions = {
+            'functional': {
+                'happy_path': f"Verify the main success scenario for {feature_name}",
+                'basic_workflow': f"Test basic workflow of {feature_name}",
+                'main_features': f"Validate core features of {feature_name}"
+            },
+            'validation': {
+                'input_validation': f"Verify input validation for {feature_name}",
+                'field_validation': f"Test field validation rules in {feature_name}",
+                'business_rules': f"Validate business rules for {feature_name}"
+            }
+        }
+        
+        return descriptions.get(category, {}).get(
+            subcategory,
+            f"Test {subcategory.replace('_', ' ')} for {feature_name}"
+        )
+        
+    def _customize_steps(
+        self,
+        base_steps: List[str],
+        issue_data: Dict,
+        category: str,
+        subcategory: str
+    ) -> List[str]:
+        """Customize steps with specific details"""
+        feature_name = issue_data.get('summary', '').strip()
+        
+        customized = []
+        for i, step in enumerate(base_steps, 1):
+            # Replace placeholders
+            step = step.replace('{feature}', feature_name)
+            
+            # Add step number if not present
+            if not re.match(r'^\d+\.?\s+', step):
+                step = f"{i}. {step}"
+                
+            customized.append(step)
+            
+        return customized
+        
+    def _generate_test_data(
+        self,
+        category: str,
+        subcategory: str,
+        issue_data: Dict
+    ) -> Dict:
+        """Generate relevant test data"""
+        test_data = {
+            'inputs': self._generate_input_data(category, subcategory),
+            'validation': self._generate_validation_data(category, subcategory)
+        }
+        
+        return test_data
+        
+    def _generate_input_data(self, category: str, subcategory: str) -> Dict:
+        """Generate input test data"""
+        if category == 'validation':
+            if subcategory == 'input_validation':
+                return {
+                    'valid_input': 'test_value',
+                    'invalid_input': '',
+                    'special_chars': '!@#$%',
+                    'max_length': 'x' * 255
+                }
+        elif category == 'edge_cases':
+            if subcategory == 'boundary_values':
+                return {
+                    'min_value': 0,
+                    'max_value': 999999,
+                    'empty_value': '',
+                    'null_value': None
+                }
+                
+        return {'default_input': 'test_value'}
+        
+    def _generate_validation_data(self, category: str, subcategory: str) -> Dict:
+        """Generate validation data"""
+        if category == 'functional':
+            return {'expected_status': 'success'}
+        elif category == 'negative':
+            return {'expected_error': 'Invalid input'}
+            
+        return {'expected_result': 'success'}
+        
+    def _generate_expected_result(
+        self,
+        category: str,
+        subcategory: str,
+        issue_data: Dict
+    ) -> str:
+        """Generate expected test result"""
+        feature_name = issue_data.get('summary', '').strip()
+        
+        if category == 'functional':
+            if subcategory == 'happy_path':
+                return f"{feature_name} completes successfully"
+        elif category == 'validation':
+            return "All validation rules pass successfully"
+        elif category == 'negative':
+            return "System handles invalid input appropriately"
+            
+        return "Test completes as expected"

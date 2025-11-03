@@ -31,7 +31,7 @@ class JIRAAIAnalyzer:
         try:
             # Setup JIRA client
             jira_server = os.environ.get("JIRA_SERVER")
-            jira_username = os.environ.get("JIRA_USERNAME")
+            jira_username = os.environ.get("JIRA_EMAIL")  # Using JIRA_EMAIL instead of JIRA_USERNAME
             jira_token = os.environ.get("JIRA_API_TOKEN")
 
             if all([jira_server, jira_username, jira_token]):
@@ -54,21 +54,16 @@ class JIRAAIAnalyzer:
                 try:
                     genai.configure(api_key=gemini_api_key)
                     
-                    # Try to use a lighter model that might not have quota issues
+                    # Use the model we know works
                     try:
-                        self.ai_model = genai.GenerativeModel('models/gemini-1.5-flash-latest')
-                        logger.info("✅ AI client initialized with model: models/gemini-1.5-flash-latest")
+                        model_name = 'models/gemini-2.5-pro'  # This is a stable model version
+                        self.ai_model = genai.GenerativeModel(model_name)
+                        logger.info(f"✅ AI client initialized with model: {model_name}")
                         self.ai_available = True
                     except Exception as e:
-                        logger.warning(f"Failed to initialize preferred AI model: {e}")
-                        # Try any available model
-                        available_models = [model.name for model in genai.list_models() if 'flash' in model.name]
-                        if available_models:
-                            self.ai_model = genai.GenerativeModel(available_models[0])
-                            logger.info(f"✅ AI client initialized with model: {available_models[0]}")
-                            self.ai_available = True
-                        else:
-                            logger.warning("No suitable AI models available")
+                        logger.warning(f"Failed to initialize AI model: {e}")
+                        self.ai_available = False
+                        logger.warning("No AI models available")
                             
                 except Exception as e:
                     logger.warning(f"AI client initialization failed: {e}")
@@ -142,10 +137,17 @@ class JIRAAIAnalyzer:
         }, indent=2)
 
     def extract_ticket_id(self, jira_url: str) -> str:
-        """Extract ticket ID from JIRA URL with proper validation"""
+        """Extract ticket ID from JIRA URL with proper validation.
+        
+        Args:
+            jira_url: JIRA ticket URL or ticket ID
+            
+        Returns:
+            Validated ticket ID or empty string if invalid
+        """
         try:
-            # Remove any query parameters
-            jira_url = jira_url.split('?')[0]
+            # Remove any query parameters and trailing slashes
+            jira_url = jira_url.split('?')[0].rstrip('/')
             
             # Handle different URL formats
             if "/browse/" in jira_url:
@@ -157,7 +159,9 @@ class JIRAAIAnalyzer:
                 ticket_id = jira_url.strip()
             
             # Validate ticket ID format (PROJECT-NUMBER)
-            if not re.match(r'^[A-Za-z]+-\d+$', ticket_id):
+            # Allow any project key (alphanumeric) followed by a hyphen and number
+            if not re.match(r'^[A-Z0-9]+-\d+$', ticket_id.upper()):
+                logger.warning(f"Invalid ticket ID format: {ticket_id}")
                 return ""
                 
             return ticket_id.upper()  # Standardize to uppercase

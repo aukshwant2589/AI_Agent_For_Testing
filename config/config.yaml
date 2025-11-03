@@ -3,7 +3,7 @@ jira:
   project_key: "KAN"
 
 gemini:
-  model: "gemini-1.5-flash-latest"
+  model: "gemini-pro"
   temperature: 0.7
 
 test_generation:
