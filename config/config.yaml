@@ -1,6 +1,6 @@
 jira:
-  server: "https://auxworx.atlassian.net"
-  project_key: "KAN"
+  server: "https://nwea.atlassian.net"
+  project_key: "HMHEPS"
 
 gemini:
   model: "gemini-pro"

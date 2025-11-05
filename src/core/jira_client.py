@@ -3,7 +3,14 @@ import os
 from typing import Dict, Optional
 from jira import JIRA
 import logging
+import json
+from pathlib import Path
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 class JIRAClient:
@@ -79,8 +86,8 @@ class JIRAClient:
             Dict containing issue details or None if not found/accessible
         """
         try:
-            # Fetch issue
-            issue = self.jira.issue(issue_key)
+            # Fetch issue with expanded attachments
+            issue = self.jira.issue(issue_key, expand='attachments')
             
             # Extract custom fields and components
             custom_fields = {}
@@ -91,6 +98,24 @@ class JIRAClient:
                     if field_value:
                         custom_fields[field_name] = field_value
                         
+            # Process attachments if present
+            attachments_data = []
+            if hasattr(issue.fields, 'attachment') and issue.fields.attachment:
+                from .attachment_processor import AttachmentProcessor
+                processor = AttachmentProcessor(f'generated_tests/{issue_key}/attachments')
+                
+                attachments = [{
+                    'filename': att.filename,
+                    'content': att.content,
+                    'mime_type': att.mimeType,
+                    'created': att.created,
+                    'size': att.size,
+                    'author': att.author.displayName,
+                    'auth_header': self.jira._options['headers'].get('Authorization', '')
+                } for att in issue.fields.attachment]
+                
+                attachments_data = processor.process_attachments(attachments)
+                        
             if hasattr(issue.fields, 'components'):
                 components = [c.name for c in issue.fields.components]
             
@@ -99,6 +124,7 @@ class JIRAClient:
                 'key': issue.key,
                 'summary': issue.fields.summary,
                 'description': issue.fields.description or '',
+                'attachments': attachments_data,
                 'issuetype': {
                     'name': issue.fields.issuetype.name,
                     'description': issue.fields.issuetype.description

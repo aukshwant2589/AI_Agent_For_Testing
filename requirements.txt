@@ -15,6 +15,15 @@ playwright>=1.39.0
 selenium>=4.15.0
 webdriver-manager>=4.0.0
 
+# Image & Document Processing
+Pillow>=10.0.0  # PIL
+pytesseract>=0.3.10
+PyMuPDF>=1.22.0  # fitz
+python-magic>=0.4.27  # For better MIME type detection
+
+# OCR Support
+tesseract-ocr>=4.1.1
+
 # Utilities
 requests>=2.28.0
 faker>=19.6.0
