@@ -1,0 +1,100 @@
+[
+  {
+    "title": "TC_GETSCORE_01: Retrieve score for a valid student and assessment",
+    "given": "A student with ID 'student-completed-123' must exist and have a completed score record for assessment 'assessment-math-g5-1'. A valid authentication token must be available.",
+    "when": "Prepare a GraphQL query for 'getScore'. And Use a valid 'studentId' and 'assessmentId' for an assessment the student has completed. And Include a valid authentication token in the 'Authorization' header. And Send the POST request to the GraphQL endpoint.",
+    "then": "Validate the HTTP status code and response body.",
+    "expected": "The API returns a 200 OK status. The response body's 'data' object contains the 'getScore' field with the correct score information, matching the database record. The response structure and data types are correct."
+  },
+  {
+    "title": "TC_GETSCORE_02: Attempt to retrieve score with an invalid authentication token",
+    "given": "The API endpoint must be protected and require authentication.",
+    "when": "Prepare a GraphQL query for 'getScore' with valid student and assessment IDs. And Include an invalid, expired, or malformed token in the 'Authorization' header. And Send the POST request to the GraphQL endpoint.",
+    "then": "Observe the HTTP status code and response body.",
+    "expected": "The API returns a 401 Unauthorized or 403 Forbidden status code. The response body contains an appropriate error message indicating an authentication failure."
+  },
+  {
+    "title": "TC_GETSCORE_03: Request score for a non-existent student",
+    "given": "A valid authentication token must be available.",
+    "when": "Prepare a GraphQL query for 'getScore'. And Use a 'studentId' that is syntactically valid but does not correspond to any student. And Use a valid 'assessmentId'. And Include a valid authentication token in the header.",
+    "then": "Send the POST request to the GraphQL endpoint.",
+    "expected": "The API returns a 200 OK status. The response body contains an 'errors' array detailing that the student could not be found, or the 'data.getScore' field is null."
+  },
+  {
+    "title": "TC_GETSCORE_04: Request score for a student who has not taken the assessment",
+    "given": "A student with ID 'student-active-456' exists but has no score record for assessment 'assessment-reading-g5-2'.",
+    "when": "Prepare a GraphQL query for 'getScore'. And Use a valid 'studentId'. And Use a valid 'assessmentId' for an assessment that this specific student has no record for. And Include a valid authentication token in the header.",
+    "then": "Send the POST request to the GraphQL endpoint.",
+    "expected": "The API returns a 200 OK status. The 'data.getScore' field in the response is null, indicating no score record was found for that student/assessment combination."
+  },
+  {
+    "title": "TC_GETSCORE_05: Request score for a student with a score of zero",
+    "given": "A student record exists for 'student-zero-score-789' with a completed score of 0 for assessment 'assessment-science-g5-3'.",
+    "when": "Prepare a GraphQL query for 'getScore'. And Use the 'studentId' and 'assessmentId' for a record where the score is exactly 0. And Include a valid authentication token in the header.",
+    "then": "Send the POST request to the GraphQL endpoint.",
+    "expected": "The API returns a 200 OK status. The response body's 'data.getScore.score' field has a value of 0 (integer or float), not null."
+  },
+  {
+    "title": "TC_GETSCORE_06: Request score using a malformed assessment ID",
+    "given": "A valid authentication token must be available.",
+    "when": "Prepare a GraphQL query for 'getScore'. And Use a valid 'studentId'. And Provide a malformed 'assessmentId' (e.g., contains invalid characters, is too long, or wrong data type). And Include a valid authentication token in the header.",
+    "then": "Send the POST request to the GraphQL endpoint.",
+    "expected": "The API returns a 400 Bad Request status, or a 200 OK with a GraphQL 'errors' array indicating a validation failure for the 'assessmentId' argument."
+  },
+  {
+    "title": "TC_GETSCORE_07: Basic functionality check without providing required arguments",
+    "given": "The 'studentId' and 'assessmentId' arguments in the GraphQL schema are marked as non-nullable.",
+    "when": "Prepare a GraphQL query for 'getScore' but omit the required 'studentId' argument. And Include a valid authentication token in the header. And Send the POST request to the GraphQL endpoint.",
+    "then": "Repeat the test, this time omitting the 'assessmentId' argument.",
+    "expected": "The API returns a 400 Bad Request status or a 200 OK with a GraphQL validation error in the 'errors' array. The error message should clearly state that a required argument is missing."
+  },
+  {
+    "title": "TC_GETSCORE_01: Retrieve score for a valid student and assessment",
+    "given": "A student with ID 'student-completed-123' must exist and have a completed score record for assessment 'assessment-math-g5-1'. A valid authentication token must be available.",
+    "when": "Prepare a GraphQL query for 'getScore'.\nAnd Use a valid 'studentId' and 'assessmentId' for an assessment the student has completed.\nAnd Include a valid authentication token in the 'Authorization' header.\nAnd Send the POST request to the GraphQL endpoint.\nAnd Validate the HTTP status code and response body.",
+    "then": "The API returns a 200 OK status. The response body's 'data' object contains the 'getScore' field with the correct score information, matching the database record. The response structure and data types are correct.",
+    "expected": "The API returns a 200 OK status. The response body's 'data' object contains the 'getScore' field with the correct score information, matching the database record. The response structure and data types are correct."
+  },
+  {
+    "title": "TC_GETSCORE_02: Attempt to retrieve score with an invalid authentication token",
+    "given": "The API endpoint must be protected and require authentication.",
+    "when": "Prepare a GraphQL query for 'getScore' with valid student and assessment IDs.\nAnd Include an invalid, expired, or malformed token in the 'Authorization' header.\nAnd Send the POST request to the GraphQL endpoint.\nAnd Observe the HTTP status code and response body.",
+    "then": "The API returns a 401 Unauthorized or 403 Forbidden status code. The response body contains an appropriate error message indicating an authentication failure.",
+    "expected": "The API returns a 401 Unauthorized or 403 Forbidden status code. The response body contains an appropriate error message indicating an authentication failure."
+  },
+  {
+    "title": "TC_GETSCORE_03: Request score for a non-existent student",
+    "given": "A valid authentication token must be available.",
+    "when": "Prepare a GraphQL query for 'getScore'.\nAnd Use a 'studentId' that is syntactically valid but does not correspond to any student.\nAnd Use a valid 'assessmentId'.\nAnd Include a valid authentication token in the header.\nAnd Send the POST request to the GraphQL endpoint.",
+    "then": "The API returns a 200 OK status. The response body contains an 'errors' array detailing that the student could not be found, or the 'data.getScore' field is null.",
+    "expected": "The API returns a 200 OK status. The response body contains an 'errors' array detailing that the student could not be found, or the 'data.getScore' field is null."
+  },
+  {
+    "title": "TC_GETSCORE_04: Request score for a student who has not taken the assessment",
+    "given": "A student with ID 'student-active-456' exists but has no score record for assessment 'assessment-reading-g5-2'.",
+    "when": "Prepare a GraphQL query for 'getScore'.\nAnd Use a valid 'studentId'.\nAnd Use a valid 'assessmentId' for an assessment that this specific student has no record for.\nAnd Include a valid authentication token in the header.\nAnd Send the POST request to the GraphQL endpoint.",
+    "then": "The API returns a 200 OK status. The 'data.getScore' field in the response is null, indicating no score record was found for that student/assessment combination.",
+    "expected": "The API returns a 200 OK status. The 'data.getScore' field in the response is null, indicating no score record was found for that student/assessment combination."
+  },
+  {
+    "title": "TC_GETSCORE_05: Request score for a student with a score of zero",
+    "given": "A student record exists for 'student-zero-score-789' with a completed score of 0 for assessment 'assessment-science-g5-3'.",
+    "when": "Prepare a GraphQL query for 'getScore'.\nAnd Use the 'studentId' and 'assessmentId' for a record where the score is exactly 0.\nAnd Include a valid authentication token in the header.\nAnd Send the POST request to the GraphQL endpoint.",
+    "then": "The API returns a 200 OK status. The response body's 'data.getScore.score' field has a value of 0 (integer or float), not null.",
+    "expected": "The API returns a 200 OK status. The response body's 'data.getScore.score' field has a value of 0 (integer or float), not null."
+  },
+  {
+    "title": "TC_GETSCORE_06: Request score using a malformed assessment ID",
+    "given": "A valid authentication token must be available.",
+    "when": "Prepare a GraphQL query for 'getScore'.\nAnd Use a valid 'studentId'.\nAnd Provide a malformed 'assessmentId' (e.g., contains invalid characters, is too long, or wrong data type).\nAnd Include a valid authentication token in the header.\nAnd Send the POST request to the GraphQL endpoint.",
+    "then": "The API returns a 400 Bad Request status, or a 200 OK with a GraphQL 'errors' array indicating a validation failure for the 'assessmentId' argument.",
+    "expected": "The API returns a 400 Bad Request status, or a 200 OK with a GraphQL 'errors' array indicating a validation failure for the 'assessmentId' argument."
+  },
+  {
+    "title": "TC_GETSCORE_07: Basic functionality check without providing required arguments",
+    "given": "The 'studentId' and 'assessmentId' arguments in the GraphQL schema are marked as non-nullable.",
+    "when": "Prepare a GraphQL query for 'getScore' but omit the required 'studentId' argument.\nAnd Include a valid authentication token in the header.\nAnd Send the POST request to the GraphQL endpoint.\nAnd Repeat the test, this time omitting the 'assessmentId' argument.",
+    "then": "The API returns a 400 Bad Request status or a 200 OK with a GraphQL validation error in the 'errors' array. The error message should clearly state that a required argument is missing.",
+    "expected": "The API returns a 400 Bad Request status or a 200 OK with a GraphQL validation error in the 'errors' array. The error message should clearly state that a required argument is missing."
+  }
+]

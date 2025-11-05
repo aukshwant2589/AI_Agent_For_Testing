@@ -1,0 +1,86 @@
+[
+  {
+    "title": "TC-001: Verify Welcome Screen for Admin with Rostering Rights on First Login",
+    "given": "The 'Welcome Screen' Feature Flag must be enabled in the test environment. A fresh user account with appropriate permissions is required.",
+    "when": "As a test administrator, ensure the target user has never logged into the platform before. And Log in as the Ed administrator with rostering rights. And Observe the initial welcome message. And Wait for the screen to transition automatically.",
+    "then": "On the 'Let's Get Started' screen, click the 'Configure Settings' button.",
+    "expected": "The user should first see a 'Welcome {Name}' message for approximately 1000ms. The screen should then transition to the 'Let's Get Started' view. Upon clicking 'Configure Settings', the user must be redirected to the 'My schools \u2192 Roster' page."
+  },
+  {
+    "title": "TC-002: Verify One-Time Display Logic after Clicking 'Go to Home'",
+    "given": "The 'Welcome Screen' Feature Flag must be enabled. The test user should not have completed the welcome flow previously.",
+    "when": "Log in as a new Ed administrator with rostering rights. And On the 'Let's Get Started' screen, click the 'Go to Home' button. And Verify you are on the standard Home page. And Log out of the application.",
+    "then": "Log back in using the same administrator credentials.",
+    "expected": "On the first login, the welcome flow is presented and clicking 'Go to Home' navigates to the Home page. On the second login, the welcome screen is skipped entirely, and the user lands directly on the Home page."
+  },
+  {
+    "title": "TC-003: Verify Admin without Rostering Rights Bypasses the Welcome Screen",
+    "given": "The 'Welcome Screen' Feature Flag must be enabled to ensure the feature logic is active but correctly bypassed.",
+    "when": "Log in as an Ed administrator who does NOT have rostering rights.",
+    "then": "The user should be immediately redirected to the standard Home page. The 'Welcome {Name}' message and the 'Let's Get Started' screen should not be displayed at any point.",
+    "expected": "The user should be immediately redirected to the standard Home page. The 'Welcome {Name}' message and the 'Let's Get Started' screen should not be displayed at any point."
+  },
+  {
+    "title": "TC-004: Verify UI Elements and Timing of the Welcome Screen",
+    "given": "The 'Welcome Screen' Feature Flag is enabled.",
+    "when": "Log in as a new Ed administrator with rostering rights. And Observe the initial screen and use a timer or browser dev tools to check the duration.",
+    "then": "Once the screen transitions, inspect the text of the two available buttons.",
+    "expected": "A message 'Welcome {Correct User Name}' is displayed. This message is visible for approximately 1000ms. It is then replaced by the 'Let's Get Started' screen, which contains two distinct buttons labeled 'Go to Home' and 'Configure Settings'."
+  },
+  {
+    "title": "TC-005: Verify Behavior when Feature Flag is Disabled",
+    "given": "Access to modify the Feature Flag for the welcome screen and set it to 'disabled'.",
+    "when": "Ensure the 'Welcome Screen' Feature Flag is turned OFF in the environment configuration. And Log in as a new Ed administrator WITH rostering rights. And Observe the landing page. And Log out and log in as an Ed administrator WITHOUT rostering rights.",
+    "then": "Observe the landing page.",
+    "expected": "For both user types (with and without rostering rights), the welcome screen flow is completely bypassed. Both users should land directly on the standard Home page."
+  },
+  {
+    "title": "TC-006: Verify Behavior on Browser Refresh on the 'Let's Get Started' Screen",
+    "given": "The 'Welcome Screen' Feature Flag is enabled.",
+    "when": "Log in as a new Ed administrator with rostering rights. And Wait for the screen to transition to the 'Let's Get Started' view.",
+    "then": "Instead of clicking a button, refresh the browser page (e.g., using F5 or the refresh icon).",
+    "expected": "After the page reloads, the user should be presented with the 'Let's Get Started' screen again. The one-time welcome flow should not be considered complete, and the user should not be redirected to the home page."
+  },
+  {
+    "title": "TC-001: Verify Welcome Screen for Admin with Rostering Rights on First Login",
+    "given": "The 'Welcome Screen' Feature Flag must be enabled in the test environment. A fresh user account with appropriate permissions is required.",
+    "when": "As a test administrator, ensure the target user has never logged into the platform before.\nAnd Log in as the Ed administrator with rostering rights.\nAnd Observe the initial welcome message.\nAnd Wait for the screen to transition automatically.\nAnd On the 'Let's Get Started' screen, click the 'Configure Settings' button.",
+    "then": "The user should first see a 'Welcome {Name}' message for approximately 1000ms. The screen should then transition to the 'Let's Get Started' view. Upon clicking 'Configure Settings', the user must be redirected to the 'My schools \u2192 Roster' page.",
+    "expected": "The user should first see a 'Welcome {Name}' message for approximately 1000ms. The screen should then transition to the 'Let's Get Started' view. Upon clicking 'Configure Settings', the user must be redirected to the 'My schools \u2192 Roster' page."
+  },
+  {
+    "title": "TC-002: Verify One-Time Display Logic after Clicking 'Go to Home'",
+    "given": "The 'Welcome Screen' Feature Flag must be enabled. The test user should not have completed the welcome flow previously.",
+    "when": "Log in as a new Ed administrator with rostering rights.\nAnd On the 'Let's Get Started' screen, click the 'Go to Home' button.\nAnd Verify you are on the standard Home page.\nAnd Log out of the application.\nAnd Log back in using the same administrator credentials.",
+    "then": "On the first login, the welcome flow is presented and clicking 'Go to Home' navigates to the Home page. On the second login, the welcome screen is skipped entirely, and the user lands directly on the Home page.",
+    "expected": "On the first login, the welcome flow is presented and clicking 'Go to Home' navigates to the Home page. On the second login, the welcome screen is skipped entirely, and the user lands directly on the Home page."
+  },
+  {
+    "title": "TC-003: Verify Admin without Rostering Rights Bypasses the Welcome Screen",
+    "given": "The 'Welcome Screen' Feature Flag must be enabled to ensure the feature logic is active but correctly bypassed.",
+    "when": "Log in as an Ed administrator who does NOT have rostering rights.",
+    "then": "The user should be immediately redirected to the standard Home page. The 'Welcome {Name}' message and the 'Let's Get Started' screen should not be displayed at any point.",
+    "expected": "The user should be immediately redirected to the standard Home page. The 'Welcome {Name}' message and the 'Let's Get Started' screen should not be displayed at any point."
+  },
+  {
+    "title": "TC-004: Verify UI Elements and Timing of the Welcome Screen",
+    "given": "The 'Welcome Screen' Feature Flag is enabled.",
+    "when": "Log in as a new Ed administrator with rostering rights.\nAnd Observe the initial screen and use a timer or browser dev tools to check the duration.\nAnd Once the screen transitions, inspect the text of the two available buttons.",
+    "then": "A message 'Welcome {Correct User Name}' is displayed. This message is visible for approximately 1000ms. It is then replaced by the 'Let's Get Started' screen, which contains two distinct buttons labeled 'Go to Home' and 'Configure Settings'.",
+    "expected": "A message 'Welcome {Correct User Name}' is displayed. This message is visible for approximately 1000ms. It is then replaced by the 'Let's Get Started' screen, which contains two distinct buttons labeled 'Go to Home' and 'Configure Settings'."
+  },
+  {
+    "title": "TC-005: Verify Behavior when Feature Flag is Disabled",
+    "given": "Access to modify the Feature Flag for the welcome screen and set it to 'disabled'.",
+    "when": "Ensure the 'Welcome Screen' Feature Flag is turned OFF in the environment configuration.\nAnd Log in as a new Ed administrator WITH rostering rights.\nAnd Observe the landing page.\nAnd Log out and log in as an Ed administrator WITHOUT rostering rights.\nAnd Observe the landing page.",
+    "then": "For both user types (with and without rostering rights), the welcome screen flow is completely bypassed. Both users should land directly on the standard Home page.",
+    "expected": "For both user types (with and without rostering rights), the welcome screen flow is completely bypassed. Both users should land directly on the standard Home page."
+  },
+  {
+    "title": "TC-006: Verify Behavior on Browser Refresh on the 'Let's Get Started' Screen",
+    "given": "The 'Welcome Screen' Feature Flag is enabled.",
+    "when": "Log in as a new Ed administrator with rostering rights.\nAnd Wait for the screen to transition to the 'Let's Get Started' view.\nAnd Instead of clicking a button, refresh the browser page (e.g., using F5 or the refresh icon).",
+    "then": "After the page reloads, the user should be presented with the 'Let's Get Started' screen again. The one-time welcome flow should not be considered complete, and the user should not be redirected to the home page.",
+    "expected": "After the page reloads, the user should be presented with the 'Let's Get Started' screen again. The one-time welcome flow should not be considered complete, and the user should not be redirected to the home page."
+  }
+]

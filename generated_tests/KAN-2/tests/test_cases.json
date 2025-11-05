@@ -1,0 +1,100 @@
+[
+  {
+    "title": "TC1: Positive - Verify successful retrieval of a valid student score",
+    "given": "A student has submitted an assignment, and the Agentic AI has successfully processed and stored a score for it.",
+    "when": "Authenticate as a Teacher user to get a valid auth token. And Identify a valid 'studentId' and 'assignmentId' for which a score has been generated. And Send a GET request to the '/getScore' endpoint including the valid 'studentId' and 'assignmentId' as parameters.",
+    "then": "Analyze the HTTP response status and body.",
+    "expected": "The API returns a 200 OK status code. The JSON response body contains the correct 'studentId', 'assignmentId', a numeric 'score', 'maxScore', and AI-specific fields like 'confidence' and 'feedback'."
+  },
+  {
+    "title": "TC2: Positive - Verify API response schema and data types",
+    "given": "A valid score exists for the specified student and assignment. An API schema definition (e.g., OpenAPI/Swagger spec) is available for validation.",
+    "when": "Send a GET request to the '/getScore' endpoint for a student with a valid, existing score. And Receive the 200 OK response. And Validate the JSON response against the defined API schema.",
+    "then": "Verify the data type of each key (e.g., 'score' is a number, 'studentId' is a string, 'feedback' is a string, 'rubricBreakdown' is an object/array).",
+    "expected": "The response body strictly adheres to the API contract. All fields are present with the correct data types (e.g., score: number, studentId: string, timestamp: ISO 8601 string). No unexpected fields are present."
+  },
+  {
+    "title": "TC3: Negative - Request score for an unsubmitted assignment",
+    "given": "A student is enrolled in a class with an assigned task but has not submitted it yet.",
+    "when": "Authenticate as a Teacher user. And Identify a 'studentId' and 'assignmentId' where the student has not yet submitted the work. And Send a GET request to the '/getScore' endpoint with this data.",
+    "then": "Analyze the HTTP response.",
+    "expected": "The API should return an appropriate error, such as a 404 Not Found status code, with a clear error message in the response body indicating that a score does not exist for the submission (e.g., 'Score not found' or 'Assignment not submitted')."
+  },
+  {
+    "title": "TC4: Negative - Request score with a non-existent student ID",
+    "given": "A valid assignment ID exists in the system.",
+    "when": "Authenticate as a Teacher user. And Use a syntactically valid but non-existent 'studentId' (e.g., 'invalid-student-id'). And Send a GET request to the '/getScore' endpoint with the invalid 'studentId' and a valid 'assignmentId'.",
+    "then": "Analyze the HTTP response.",
+    "expected": "The API returns a 404 Not Found status code with a descriptive error message like 'Student not found'."
+  },
+  {
+    "title": "TC5: Negative - Unauthorized access attempt",
+    "given": "A valid score for a student and assignment exists.",
+    "when": "Do not include an 'Authorization' header in the request. And Send a GET request to the '/getScore' endpoint with a valid 'studentId' and 'assignmentId'. And Analyze the response.",
+    "then": "Repeat the request using an auth token for a user with insufficient privileges (e.g., a different student).",
+    "expected": "The API returns a 401 Unauthorized status for the request with no token, and a 403 Forbidden status for the request with an insufficient-privilege token. The response body should contain a relevant error message."
+  },
+  {
+    "title": "TC6: Edge Case - Score value is zero",
+    "given": "A student submission has been evaluated by the Agentic AI and resulted in a score of 0.",
+    "when": "Authenticate as a Teacher user. And Identify a 'studentId' and 'assignmentId' for which the AI has generated a score of 0. And Send a GET request to the '/getScore' endpoint with this data.",
+    "then": "Analyze the response body.",
+    "expected": "The API returns a 200 OK status. The response body correctly shows the 'score' field with a value of 0, not null or undefined."
+  },
+  {
+    "title": "TC7: Edge Case - Score is still being processed by the AI",
+    "given": "Ability to query the API immediately after a student submission is made.",
+    "when": "Simulate a student submission for an AI-scored assignment. And Immediately send a GET request to the '/getScore' endpoint for that submission before the AI has had time to complete processing.",
+    "then": "Analyze the response status and body.",
+    "expected": "The API returns a specific status code (e.g., 202 Accepted) or a 200 OK with a specific status field in the body (e.g., '\"status\": \"processing\"'). The response should clearly indicate that the score is not yet ready, rather than returning an error or no data."
+  },
+  {
+    "title": "TC1: Positive - Verify successful retrieval of a valid student score",
+    "given": "A student has submitted an assignment, and the Agentic AI has successfully processed and stored a score for it.",
+    "when": "Authenticate as a Teacher user to get a valid auth token.\nAnd Identify a valid 'studentId' and 'assignmentId' for which a score has been generated.\nAnd Send a GET request to the '/getScore' endpoint including the valid 'studentId' and 'assignmentId' as parameters.\nAnd Analyze the HTTP response status and body.",
+    "then": "The API returns a 200 OK status code. The JSON response body contains the correct 'studentId', 'assignmentId', a numeric 'score', 'maxScore', and AI-specific fields like 'confidence' and 'feedback'.",
+    "expected": "The API returns a 200 OK status code. The JSON response body contains the correct 'studentId', 'assignmentId', a numeric 'score', 'maxScore', and AI-specific fields like 'confidence' and 'feedback'."
+  },
+  {
+    "title": "TC2: Positive - Verify API response schema and data types",
+    "given": "A valid score exists for the specified student and assignment. An API schema definition (e.g., OpenAPI/Swagger spec) is available for validation.",
+    "when": "Send a GET request to the '/getScore' endpoint for a student with a valid, existing score.\nAnd Receive the 200 OK response.\nAnd Validate the JSON response against the defined API schema.\nAnd Verify the data type of each key (e.g., 'score' is a number, 'studentId' is a string, 'feedback' is a string, 'rubricBreakdown' is an object/array).",
+    "then": "The response body strictly adheres to the API contract. All fields are present with the correct data types (e.g., score: number, studentId: string, timestamp: ISO 8601 string). No unexpected fields are present.",
+    "expected": "The response body strictly adheres to the API contract. All fields are present with the correct data types (e.g., score: number, studentId: string, timestamp: ISO 8601 string). No unexpected fields are present."
+  },
+  {
+    "title": "TC3: Negative - Request score for an unsubmitted assignment",
+    "given": "A student is enrolled in a class with an assigned task but has not submitted it yet.",
+    "when": "Authenticate as a Teacher user.\nAnd Identify a 'studentId' and 'assignmentId' where the student has not yet submitted the work.\nAnd Send a GET request to the '/getScore' endpoint with this data.\nAnd Analyze the HTTP response.",
+    "then": "The API should return an appropriate error, such as a 404 Not Found status code, with a clear error message in the response body indicating that a score does not exist for the submission (e.g., 'Score not found' or 'Assignment not submitted').",
+    "expected": "The API should return an appropriate error, such as a 404 Not Found status code, with a clear error message in the response body indicating that a score does not exist for the submission (e.g., 'Score not found' or 'Assignment not submitted')."
+  },
+  {
+    "title": "TC4: Negative - Request score with a non-existent student ID",
+    "given": "A valid assignment ID exists in the system.",
+    "when": "Authenticate as a Teacher user.\nAnd Use a syntactically valid but non-existent 'studentId' (e.g., 'invalid-student-id').\nAnd Send a GET request to the '/getScore' endpoint with the invalid 'studentId' and a valid 'assignmentId'.\nAnd Analyze the HTTP response.",
+    "then": "The API returns a 404 Not Found status code with a descriptive error message like 'Student not found'.",
+    "expected": "The API returns a 404 Not Found status code with a descriptive error message like 'Student not found'."
+  },
+  {
+    "title": "TC5: Negative - Unauthorized access attempt",
+    "given": "A valid score for a student and assignment exists.",
+    "when": "Do not include an 'Authorization' header in the request.\nAnd Send a GET request to the '/getScore' endpoint with a valid 'studentId' and 'assignmentId'.\nAnd Analyze the response.\nAnd Repeat the request using an auth token for a user with insufficient privileges (e.g., a different student).",
+    "then": "The API returns a 401 Unauthorized status for the request with no token, and a 403 Forbidden status for the request with an insufficient-privilege token. The response body should contain a relevant error message.",
+    "expected": "The API returns a 401 Unauthorized status for the request with no token, and a 403 Forbidden status for the request with an insufficient-privilege token. The response body should contain a relevant error message."
+  },
+  {
+    "title": "TC6: Edge Case - Score value is zero",
+    "given": "A student submission has been evaluated by the Agentic AI and resulted in a score of 0.",
+    "when": "Authenticate as a Teacher user.\nAnd Identify a 'studentId' and 'assignmentId' for which the AI has generated a score of 0.\nAnd Send a GET request to the '/getScore' endpoint with this data.\nAnd Analyze the response body.",
+    "then": "The API returns a 200 OK status. The response body correctly shows the 'score' field with a value of 0, not null or undefined.",
+    "expected": "The API returns a 200 OK status. The response body correctly shows the 'score' field with a value of 0, not null or undefined."
+  },
+  {
+    "title": "TC7: Edge Case - Score is still being processed by the AI",
+    "given": "Ability to query the API immediately after a student submission is made.",
+    "when": "Simulate a student submission for an AI-scored assignment.\nAnd Immediately send a GET request to the '/getScore' endpoint for that submission before the AI has had time to complete processing.\nAnd Analyze the response status and body.",
+    "then": "The API returns a specific status code (e.g., 202 Accepted) or a 200 OK with a specific status field in the body (e.g., '\"status\": \"processing\"'). The response should clearly indicate that the score is not yet ready, rather than returning an error or no data.",
+    "expected": "The API returns a specific status code (e.g., 202 Accepted) or a 200 OK with a specific status field in the body (e.g., '\"status\": \"processing\"'). The response should clearly indicate that the score is not yet ready, rather than returning an error or no data."
+  }
+]

@@ -1,0 +1,114 @@
+[
+  {
+    "title": "TC001_Login_Successful_Valid_Credentials",
+    "given": "A pre-registered, active user account must exist in the system.",
+    "when": "Navigate to the HMH Ed login page. And Enter a valid, registered username in the username field. And Enter the corresponding correct password in the password field.",
+    "then": "Click the 'Sign In' or 'Login' button.",
+    "expected": "User is authenticated and redirected to the application's main dashboard or home page."
+  },
+  {
+    "title": "TC002_Login_Failed_Invalid_Password",
+    "given": "A pre-registered user account must exist.",
+    "when": "Navigate to the HMH Ed login page. And Enter a valid, registered username. And Enter an incorrect password.",
+    "then": "Click the 'Sign In' or 'Login' button.",
+    "expected": "An appropriate error message (e.g., 'Invalid username or password.') is displayed. The user remains on the login page."
+  },
+  {
+    "title": "TC003_Login_Failed_Invalid_Username",
+    "given": "N/A",
+    "when": "Navigate to the HMH Ed login page. And Enter a username that is not registered in the system. And Enter any password.",
+    "then": "Click the 'Sign In' or 'Login' button.",
+    "expected": "A generic error message (e.g., 'Invalid username or password.') is displayed to prevent user enumeration. The user remains on the login page."
+  },
+  {
+    "title": "TC004_Login_Failed_Empty_Credentials",
+    "given": "N/A",
+    "when": "Navigate to the HMH Ed login page. And Leave the username field blank. And Leave the password field blank.",
+    "then": "Click the 'Sign In' or 'Login' button.",
+    "expected": "Client-side validation errors appear, prompting the user to enter a username and password (e.g., 'This field is required'). The login request is not sent to the server."
+  },
+  {
+    "title": "TC005_Login_Username_Case_Insensitivity",
+    "given": "A valid user account with a known username (e.g., valid_user@example.com) must exist.",
+    "when": "Navigate to the HMH Ed login page. And Enter a valid username but in a different letter case (e.g., uppercase or mixed case). And Enter the corresponding correct password.",
+    "then": "Click the 'Sign In' or 'Login' button.",
+    "expected": "User is successfully authenticated and redirected to the dashboard, confirming the username is case-insensitive."
+  },
+  {
+    "title": "TC006_Login_Password_Case_Sensitivity",
+    "given": "A valid user account with a known password (e.g., ValidPassword123!) must exist.",
+    "when": "Navigate to the HMH Ed login page. And Enter a valid username. And Enter the correct password but with incorrect letter casing.",
+    "then": "Click the 'Sign In' or 'Login' button.",
+    "expected": "Login fails and an 'Invalid username or password.' error is displayed, confirming the password field is case-sensitive."
+  },
+  {
+    "title": "TC007_Login_Password_Field_Masking",
+    "given": "N/A",
+    "when": "Navigate to the HMH Ed login page. And Click on the password field.",
+    "then": "Type a sequence of characters into the password field.",
+    "expected": "The characters entered in the password field are obscured (e.g., displayed as dots or asterisks) and not shown in plain text."
+  },
+  {
+    "title": "TC008_Login_Forgot_Password_Link_Functionality",
+    "given": "N/A",
+    "when": "Navigate to the HMH Ed login page.",
+    "then": "Locate and click on the 'Forgot Password?' link.",
+    "expected": "The user is successfully redirected to the password recovery page or modal."
+  },
+  {
+    "title": "TC001_Login_Successful_Valid_Credentials",
+    "given": "A pre-registered, active user account must exist in the system.",
+    "when": "Navigate to the HMH Ed login page.\nAnd Enter a valid, registered username in the username field.\nAnd Enter the corresponding correct password in the password field.\nAnd Click the 'Sign In' or 'Login' button.",
+    "then": "User is authenticated and redirected to the application's main dashboard or home page.",
+    "expected": "User is authenticated and redirected to the application's main dashboard or home page."
+  },
+  {
+    "title": "TC002_Login_Failed_Invalid_Password",
+    "given": "A pre-registered user account must exist.",
+    "when": "Navigate to the HMH Ed login page.\nAnd Enter a valid, registered username.\nAnd Enter an incorrect password.\nAnd Click the 'Sign In' or 'Login' button.",
+    "then": "An appropriate error message (e.g., 'Invalid username or password.') is displayed. The user remains on the login page.",
+    "expected": "An appropriate error message (e.g., 'Invalid username or password.') is displayed. The user remains on the login page."
+  },
+  {
+    "title": "TC003_Login_Failed_Invalid_Username",
+    "given": "N/A",
+    "when": "Navigate to the HMH Ed login page.\nAnd Enter a username that is not registered in the system.\nAnd Enter any password.\nAnd Click the 'Sign In' or 'Login' button.",
+    "then": "A generic error message (e.g., 'Invalid username or password.') is displayed to prevent user enumeration. The user remains on the login page.",
+    "expected": "A generic error message (e.g., 'Invalid username or password.') is displayed to prevent user enumeration. The user remains on the login page."
+  },
+  {
+    "title": "TC004_Login_Failed_Empty_Credentials",
+    "given": "N/A",
+    "when": "Navigate to the HMH Ed login page.\nAnd Leave the username field blank.\nAnd Leave the password field blank.\nAnd Click the 'Sign In' or 'Login' button.",
+    "then": "Client-side validation errors appear, prompting the user to enter a username and password (e.g., 'This field is required'). The login request is not sent to the server.",
+    "expected": "Client-side validation errors appear, prompting the user to enter a username and password (e.g., 'This field is required'). The login request is not sent to the server."
+  },
+  {
+    "title": "TC005_Login_Username_Case_Insensitivity",
+    "given": "A valid user account with a known username (e.g., valid_user@example.com) must exist.",
+    "when": "Navigate to the HMH Ed login page.\nAnd Enter a valid username but in a different letter case (e.g., uppercase or mixed case).\nAnd Enter the corresponding correct password.\nAnd Click the 'Sign In' or 'Login' button.",
+    "then": "User is successfully authenticated and redirected to the dashboard, confirming the username is case-insensitive.",
+    "expected": "User is successfully authenticated and redirected to the dashboard, confirming the username is case-insensitive."
+  },
+  {
+    "title": "TC006_Login_Password_Case_Sensitivity",
+    "given": "A valid user account with a known password (e.g., ValidPassword123!) must exist.",
+    "when": "Navigate to the HMH Ed login page.\nAnd Enter a valid username.\nAnd Enter the correct password but with incorrect letter casing.\nAnd Click the 'Sign In' or 'Login' button.",
+    "then": "Login fails and an 'Invalid username or password.' error is displayed, confirming the password field is case-sensitive.",
+    "expected": "Login fails and an 'Invalid username or password.' error is displayed, confirming the password field is case-sensitive."
+  },
+  {
+    "title": "TC007_Login_Password_Field_Masking",
+    "given": "N/A",
+    "when": "Navigate to the HMH Ed login page.\nAnd Click on the password field.\nAnd Type a sequence of characters into the password field.",
+    "then": "The characters entered in the password field are obscured (e.g., displayed as dots or asterisks) and not shown in plain text.",
+    "expected": "The characters entered in the password field are obscured (e.g., displayed as dots or asterisks) and not shown in plain text."
+  },
+  {
+    "title": "TC008_Login_Forgot_Password_Link_Functionality",
+    "given": "N/A",
+    "when": "Navigate to the HMH Ed login page.\nAnd Locate and click on the 'Forgot Password?' link.",
+    "then": "The user is successfully redirected to the password recovery page or modal.",
+    "expected": "The user is successfully redirected to the password recovery page or modal."
+  }
+]
